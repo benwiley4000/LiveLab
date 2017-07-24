@@ -1,6 +1,7 @@
 var xtend = Object.assign
 var shortid = require('shortid')
 var MultiPeer = require('./../lib/MultiPeer.js')
+var LocalSignaling = window.require('./LocalSignaling.js')
 
 // To do: separate ui events (logged in) and connection state/ status log from user model
 // status log contains all peer connection related information
@@ -13,6 +14,8 @@ function userModel (state, bus) {
     uuid: shortid.generate(), // for dev purposes, always regenerate id
     room: 'test',
     server: 'https://live-lab-v1.glitch.me/',
+    localport: 8001,
+    uselocal: 'Remote Signaling',
     loggedIn: false,
     statusMessage: ''
   }, state.user)
@@ -40,6 +43,25 @@ function userModel (state, bus) {
     state.user.room = room
     bus.emit('render')
   })
+
+  bus.on('user:setLocalPort', function (localport) {
+    state.user.localport = localport
+    LocalSignaling(state.user.localport)
+    bus.emit('user:useLocal')
+    bus.emit('render')
+  })
+
+  bus.on('user:useLocal', function (uselocal) {
+    state.user.uselocal = uselocal
+    if (state.user.uselocal == 'Local Signaling') {
+      var localServer = "http://localhost:" + state.user.localport
+      bus.emit('user:setServer', localServer)
+    }
+    else {
+      bus.emit('user:setServer', 'https://live-lab-v1.glitch.me/')
+    }
+    bus.emit('render')
+  })  
 
   // TO DO: validate form info before submitting
   bus.on('user:join', function () {
@@ -84,6 +106,7 @@ function userModel (state, bus) {
       bus.emit('peers:removePeer', id)
     })
     multiPeer.on('new peer', function (data) {
+
       // console.log("NEW REMOTE PEER", data)
       bus.emit('peers:updatePeer', {
         peerId: data.id
