@@ -11,15 +11,17 @@ function userModel (state, bus) {
   state.user = xtend({
     //uuid: localStorage.getItem('uuid') || shortid.generate(), // persistent local user id. If none is present in local storage, generate new one
     uuid: shortid.generate(), // for dev purposes, always regenerate id
-    room: 'test',
-    server: 'https://live-lab-v1.glitch.me/',
+    room: 'Etra',
+    nickname: 'artist',
+    // server: 'https://live-lab-v1.glitch.me/',
+    server: 'https://192.168.0.6:8000/',
     loggedIn: false,
     statusMessage: ''
   }, state.user)
 
   bus.emit('peers:updatePeer', {
     peerId: state.user.uuid,
-    nickname: 'olivia'
+    nickname: 'artist'
   })
 
   bus.on('user:setNickname', function (name) {
@@ -39,8 +41,10 @@ function userModel (state, bus) {
   bus.on('user:setRoom', function (room) {
     state.user.room = room
     bus.emit('render')
-  })
+  }) 
 
+
+  // var multiPeer
   // TO DO: validate form info before submitting
   bus.on('user:join', function () {
     localStorage.setItem('uuid', state.user.uuid)
@@ -55,6 +59,7 @@ function userModel (state, bus) {
     })
 
     multiPeer.on('peers', function (peers) {
+      console.log('new peers', peers)
       state.user.loggedIn = true
       state.user.statusMessage += 'Connected to server ' + state.user.server + '\n'
       var peersInfo = peers.map(function (peer) {
@@ -84,6 +89,7 @@ function userModel (state, bus) {
       bus.emit('peers:removePeer', id)
     })
     multiPeer.on('new peer', function (data) {
+
       // console.log("NEW REMOTE PEER", data)
       bus.emit('peers:updatePeer', {
         peerId: data.id
@@ -104,6 +110,17 @@ function userModel (state, bus) {
     state.user.statusMessage = 'Contacting server ' + state.user.server + '\n'
 
     bus.emit('render')
+  })
+
+  bus.on('user:hangup', function() {
+    // bus.emit('devices:getDevices', 'getDevices')
+    // bus.emit('peers:updatePeer', {
+    //   peerId: shortid.generate()
+    // })
+    state.user.loggedIn = false
+    state.user.statusMessage = 'Disconnected from server ' + state.user.server + '\n'
+    bus.emit('render')
+    multiPeer._destroy()
   })
 
   function getLocalCommunicationStream () {

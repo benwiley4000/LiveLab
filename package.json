@@ -1,23 +1,15 @@
 {
-  "name": "livelabv1",
+  "name": "livelab.Etra",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "watch": "cross-env NODE_ENV=development watchify -t sheetify app.js -v -o bundle.js",
     "start": "cross-env NODE_ENV=development electron .",
-    "dev": "cross-env npm run watch & npm run start",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "cross-env npm run watch & npm run start"
   },
-  "keywords": [
-    "webrtc",
-    "p2p",
-    "webaudio",
-    "osc",
-    "show",
-    "control"
-  ],
-  "author": "Olivia Jack",
+
+  "author": "Jesse Ricke",
   "license": "ISC",
   "devDependencies": {
     "browserify": "^14.4.0",
@@ -29,9 +21,6 @@
     "choo": "^5.6.2",
     "choo-expose": "^1.0.1",
     "choo-log": "^6.1.2",
-    "electron-json-storage": "^3.0.5",
-    "electron-store": "^1.1.0",
-    "electron-window": "^0.8.1",
     "enumerate-devices": "^1.1.1",
     "getusermedia": "^2.0.1",
     "juliangruber-shallow-equal": "^1.0.4",
@@ -40,7 +29,9 @@
     "sheetify": "^6.1.0",
     "shortid": "^2.2.8",
     "simple-peer": "^8.1.0",
+    "socket.io": "^2.0.3",
     "socket.io-client": "^2.0.2",
-    "tachyons": "^4.7.4"
+    "tachyons": "^4.7.4",
+    "browserify-middleware": "^7.1.0"
   }
 }

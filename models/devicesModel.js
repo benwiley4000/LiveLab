@@ -2,6 +2,9 @@ const enumerateDevices = require('enumerate-devices')
 
 const xtend = Object.assign
 
+const isFirefox = typeof InstallTrigger !== 'undefined'
+const isChrome = !!window.chrome && !!window.chrome.webstore
+
 module.exports = devicesModel
 
 function devicesModel (state, bus) {
@@ -26,7 +29,8 @@ function devicesModel (state, bus) {
     default: {
       audioinput: null,
       videoinput: null
-    }
+    },
+    popupwindows: {}
   }, state.devices)
 
 // TO DO: put this function somewhere else
@@ -37,12 +41,26 @@ function devicesModel (state, bus) {
     })
   }
 
+  bus.on('devices:getDevices', getDevices)
+
   bus.on('devices:setDefaultAudio', function (val) {
     setDefaultAudio(val)
   })
 
   bus.on('devices:setDefaultVideo', function (val) {
     setDefaultVideo(val)
+  })
+
+  bus.on('devices:popupWindow', function(val) {
+    popupWindow(val)
+  })
+
+  bus.on('devices:audioLevel', function(val) {
+    audioLevel(val)
+  })
+
+  bus.on('devices:fullscreenWindow', function(val) {
+    fullscreenWindow(val)
   })
 // bus.on('devices:getDevices', function () {
 // TO DO: use electron remote available displays to enumerate video output devices
@@ -97,4 +115,46 @@ function devicesModel (state, bus) {
       bus.emit('render')
     }).catch(console.log.bind(console)) // TO DO:: display error to user
   }
+
+  function popupWindow(vidID) {
+    console.log('vidID', vidID)
+    var vidEl = document.getElementById(vidID)
+    var ip = window.location.host
+    var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + vidID, 'popup')
+    state.devices.popupwindows[vidID] = popupWindow
+    console.log('popupWindows', state.devices.popupwindows)
+    popupWindow.onload = function(){
+      popupWindow.document.getElementById('showVideo').srcObject = vidEl.srcObject
+    }
+  }
+
+  function fullscreenWindow(el) {
+    var popupWindow = state.devices.popupwindows[el.name]
+    console.log('el', el)
+    popupWindow.focus()
+    if (el.value == 'Full Screen') {
+        if (isFirefox == true) {
+            popupWindow.document.getElementById('showVideo').mozRequestFullScreen();
+        }
+        if (isChrome == true) {
+            popupWindow.document.getElementById('showVideo').webkitRequestFullScreen();
+        }
+        el.value = 'Exit Full'
+    } else {
+        if (isFirefox == true) {
+            popupWindow.document.getElementById('showVideo').mozCancelFullscreen();
+        }
+        if (isChrome == true) {
+            popupWindow.document.getElementById('showVideo').webkitExitFullscreen();
+        }
+        el.value = 'Full Screen'
+    }
+  }
+
+  function audioLevel(el) {
+    var audioEl = document.getElementById(el.name)
+    audioEl.volume = el.value
+    audioEl.muted = false
+  }
+
 }

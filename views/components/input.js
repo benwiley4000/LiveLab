@@ -16,10 +16,16 @@ function inputElement (name, defaultText, opts) {
   }
 
   var inputProps = xtend(defaultProps, opts)
-  var defaultClass = 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-100'
-  inputProps.class = defaultClass + ' ' + inputProps.class
 
-  return html`<div class="mv3">
+  if (!inputProps.class) {
+    var defaultClass = 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-100'
+    inputProps.class = defaultClass
+  }
+
+  var divClass = "mv3"
+  if (inputProps.divclass) {divClass = inputProps.divclass}  
+
+  return html`<div class=${divClass}>
     <label class="db fw6 lh-copy f6" for=${name}>${name}</label>
     <input ${inputProps}>
   </div>`
