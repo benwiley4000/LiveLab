@@ -9,7 +9,6 @@ const app = choo()
 
 app.use(log())
 app.use(expose())
-// }
 
 app.use(require('./models/devicesModel.js'))
 app.use(require('./models/mediaModel.js'))
@@ -267,12 +266,10 @@ function devicesModel (state, bus) {
   }
 
   function popupWindow(vidID) {
-    console.log('vidID', vidID)
     var vidEl = document.getElementById(vidID)
     var ip = window.location.host
     var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + vidID, 'popup')
     state.devices.popupwindows[vidID] = popupWindow
-    console.log('popupWindows', state.devices.popupwindows)
     popupWindow.onload = function(){
       popupWindow.document.getElementById('showVideo').srcObject = vidEl.srcObject
     }
@@ -280,7 +277,6 @@ function devicesModel (state, bus) {
 
   function fullscreenWindow(el) {
     var popupWindow = state.devices.popupwindows[el.name]
-    console.log('el', el)
     popupWindow.focus()
     if (el.value == 'Full Screen') {
         if (isFirefox == true) {
@@ -524,8 +520,7 @@ function userModel (state, bus) {
     uuid: shortid.generate(), // for dev purposes, always regenerate id
     room: 'Etra',
     nickname: 'artist',
-    // server: 'https://live-lab-v1.glitch.me/',
-    server: 'https://192.168.0.6:8000/',
+    server: 'https://localhost:8000/',
     loggedIn: false,
     statusMessage: ''
   }, state.user)
@@ -20363,10 +20358,8 @@ module.exports = loginView
 const audioDropdown = Dropdown()
 const videoDropdown = Dropdown()
 const defaultVid = VideoEl()
-// const demoVideo = Video()
 
 function loginView (state, emit) {
-//   console.log("media ", state.media)
 
   var audioinput = state.devices.audioinput
   var videoinput = state.devices.videoinput
@@ -20374,7 +20367,6 @@ function loginView (state, emit) {
   var defaultVideo = state.devices.default.videoinput
 
   var peerIndex = state.peers.all
-  console.log('peers ', peerIndex)
 
   return html`
   <div>
@@ -20452,12 +20444,7 @@ function loginView (state, emit) {
   function setLocalPort (e) {
     emit('user:setLocalPort', e.target.value)
   }
-
-  function useLocal (e) {
-    if (e.target.value == 'Local Signaling') {
-      emit('user:useLocal', 'Remote Signaling')
-    } else {emit('user:useLocal', 'Local Signaling')}
-  }   
+ 
 }
 
 },{"./components/VideoContainer.js":142,"./components/button.js":144,"./components/dropdown.js":145,"./components/input.js":146,"choo/html":19}],150:[function(require,module,exports){
@@ -20513,7 +20500,6 @@ function sessionView (state, emit) {
   // create containers for each
   var sessionVids = peerVids.map(function (vidEl, index) {
     var peerIndex = state.peers.all[index]
-    console.log('peers ', peerIndex)
     if (peerIndex) {
       var videoId = state.peers.byId[peerIndex].defaultTracks.video
       console.log('videoId ', videoId)

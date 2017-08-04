@@ -117,12 +117,10 @@ function devicesModel (state, bus) {
   }
 
   function popupWindow(vidID) {
-    console.log('vidID', vidID)
     var vidEl = document.getElementById(vidID)
     var ip = window.location.host
     var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + vidID, 'popup')
     state.devices.popupwindows[vidID] = popupWindow
-    console.log('popupWindows', state.devices.popupwindows)
     popupWindow.onload = function(){
       popupWindow.document.getElementById('showVideo').srcObject = vidEl.srcObject
     }
@@ -130,7 +128,6 @@ function devicesModel (state, bus) {
 
   function fullscreenWindow(el) {
     var popupWindow = state.devices.popupwindows[el.name]
-    console.log('el', el)
     popupWindow.focus()
     if (el.value == 'Full Screen') {
         if (isFirefox == true) {

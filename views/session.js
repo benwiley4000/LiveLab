@@ -24,7 +24,6 @@ function sessionView (state, emit) {
   // create containers for each
   var sessionVids = peerVids.map(function (vidEl, index) {
     var peerIndex = state.peers.all[index]
-    console.log('peers ', peerIndex)
     if (peerIndex) {
       var videoId = state.peers.byId[peerIndex].defaultTracks.video
       console.log('videoId ', videoId)
