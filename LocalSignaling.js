@@ -1,6 +1,9 @@
 
 var http = require('http')
 var httpServer = http.createServer()
+httpServer.on('listening', function() {console.log('local port ', httpServer.address().port)})
+// var httpServer
+
 //iniciar los websockets en el servidor
 var io = require('socket.io')(httpServer)
 
@@ -63,7 +66,22 @@ io.on('connection', function (socket) {
 });
 
 var LocalSignaling = function (portNum) {
-  httpServer.listen(portNum)
+  // httpServer.listen(portNum)
+
+  if (portNum == 0) {
+    httpServer.close()
+    httpServer.on('close', function() {console.log('local signaling open? ', httpServer.listening)})
+  } else {
+    if (httpServer.listening == true) {
+      if (portNum !== httpServer.address().port) {
+        httpServer.close()
+        httpServer.listen(portNum)
+      }
+    } else {
+      httpServer.close()
+      httpServer.listen(portNum)
+    }
+  }
 }
 
 module.exports = LocalSignaling

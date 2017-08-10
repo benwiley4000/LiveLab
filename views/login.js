@@ -57,7 +57,7 @@ function loginView (state, emit) {
           })}
           ${input('Local port', '8000', {
             value: state.user.localport,
-            onkeyup: setLocalPort,
+            onchange: setLocalPort,
             class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-30',
             divclass: 'fl pb4'
           })}

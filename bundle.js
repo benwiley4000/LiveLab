@@ -47,7 +47,6 @@ var MultiPeer = function (options) {
 
   // emit 'join' event to signalling server
   this.signaller.emit('join', this._room, this._userData)
-  console.log('new multipeer', this.signaller)
 }
 // inherits from events module in order to trigger events
 inherits(MultiPeer, events)
@@ -452,7 +451,7 @@ function userModel (state, bus) {
     uuid: shortid.generate(), // for dev purposes, always regenerate id
     room: 'test',
     server: 'https://live-lab-v1.glitch.me/',
-    localport: 8001,
+    localport: 8000,
     uselocal: 'Remote Signaling',
     loggedIn: false,
     statusMessage: ''
@@ -474,6 +473,7 @@ function userModel (state, bus) {
 
   bus.on('user:setServer', function (server) {
     state.user.server = server
+    console.log('server', state.user.server)
     bus.emit('render')
   })
 
@@ -483,20 +483,27 @@ function userModel (state, bus) {
   })
 
   bus.on('user:setLocalPort', function (localport) {
-    state.user.localport = localport
-    LocalSignaling(state.user.localport)
-    bus.emit('user:useLocal')
+    if (localport > 1023 && localport < 49152) {
+      state.user.localport = localport
+      if (state.user.uselocal == 'Local Signaling') {
+        LocalSignaling(state.user.localport)
+        bus.emit('user:setServer', "http://localhost:" + state.user.localport)
+      }
+    } else {state.user.statusMessage = 'Local port must be between 1024 and 49151'}
     bus.emit('render')
   })
 
   bus.on('user:useLocal', function (uselocal) {
     state.user.uselocal = uselocal
     if (state.user.uselocal == 'Local Signaling') {
-      var localServer = "http://localhost:" + state.user.localport
-      bus.emit('user:setServer', localServer)
+      LocalSignaling(state.user.localport)
+      bus.emit('user:setServer', "http://localhost:" + state.user.localport)
+      state.user.statusMessage = 'Ready to use local signaling'
     }
     else {
+      LocalSignaling(0)
       bus.emit('user:setServer', 'https://live-lab-v1.glitch.me/')
+      state.user.statusMessage = 'Ready to use remote signaling'
     }
     bus.emit('render')
   })  
@@ -1960,7 +1967,7 @@ function from (value, encodingOrOffset, length) {
     throw new TypeError('"value" argument must not be a number')
   }
 
-  if (value instanceof ArrayBuffer) {
+  if (isArrayBuffer(value)) {
     return fromArrayBuffer(value, encodingOrOffset, length)
   }
 
@@ -2220,7 +2227,7 @@ function byteLength (string, encoding) {
   if (Buffer.isBuffer(string)) {
     return string.length
   }
-  if (isArrayBufferView(string) || string instanceof ArrayBuffer) {
+  if (isArrayBufferView(string) || isArrayBuffer(string)) {
     return string.byteLength
   }
   if (typeof string !== 'string') {
@@ -3550,6 +3557,14 @@ function blitBuffer (src, dst, offset, length) {
     dst[i + offset] = src[i]
   }
   return i
+}
+
+// ArrayBuffers from another context (i.e. an iframe) do not pass the `instanceof` check
+// but they should be treated as valid. See: https://github.com/feross/buffer/issues/166
+function isArrayBuffer (obj) {
+  return obj instanceof ArrayBuffer ||
+    (obj != null && obj.constructor != null && obj.constructor.name === 'ArrayBuffer' &&
+      typeof obj.byteLength === 'number')
 }
 
 // Node 0.10 supports `ArrayBuffer` but lacks `ArrayBuffer.isView`
@@ -9764,6 +9779,7 @@ var assert = require('assert')
 var xtend = require('xtend')
 
 var emojis = {
+  trace: '🔍',
   debug: '🐛',
   info: '✨',
   warn: '⚠️',
@@ -9772,6 +9788,7 @@ var emojis = {
 }
 
 var levels = {
+  trace: 10,
   debug: 20,
   info: 30,
   warn: 40,
@@ -9811,6 +9828,12 @@ function Nanologger (name, opts) {
   }
 
   this._logLevel = levels[this.logLevel]
+}
+
+Nanologger.prototype.trace = function () {
+  var args = [ 'trace' ]
+  for (var i = 0, len = arguments.length; i < len; i++) args.push(arguments[i])
+  this._print.apply(this, args)
 }
 
 Nanologger.prototype.debug = function () {
@@ -17633,6 +17656,14 @@ Trie.prototype.match = function (route) {
     if (trie.nodes.hasOwnProperty(thisRoute)) {
       // match regular routes first
       return search(index + 1, trie.nodes[thisRoute])
+    } else if (trie.name) {
+      // match named routes
+      try {
+        params[trie.name] = decodeURIComponent(thisRoute)
+      } catch (e) {
+        return search(index, undefined)
+      }
+      return search(index + 1, trie.nodes['$$'])
     } else if (trie.wildcard) {
       // match wildcards
       try {
@@ -17642,14 +17673,6 @@ Trie.prototype.match = function (route) {
       }
       // return early, or else search may keep recursing through the wildcard
       return trie.nodes['$$']
-    } else if (trie.name) {
-      // match named routes
-      try {
-        params[trie.name] = decodeURIComponent(thisRoute)
-      } catch (e) {
-        return search(index, undefined)
-      }
-      return search(index + 1, trie.nodes['$$'])
     } else {
       // no matches found
       return search(index + 1)
@@ -20306,7 +20329,7 @@ function loginView (state, emit) {
           })}
           ${input('Local port', '8000', {
             value: state.user.localport,
-            onkeyup: setLocalPort,
+            onchange: setLocalPort,
             class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-30',
             divclass: 'fl pb4'
           })}

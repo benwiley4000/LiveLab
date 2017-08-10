@@ -14,7 +14,7 @@ function userModel (state, bus) {
     uuid: shortid.generate(), // for dev purposes, always regenerate id
     room: 'test',
     server: 'https://live-lab-v1.glitch.me/',
-    localport: 8001,
+    localport: 8000,
     uselocal: 'Remote Signaling',
     loggedIn: false,
     statusMessage: ''
@@ -36,6 +36,7 @@ function userModel (state, bus) {
 
   bus.on('user:setServer', function (server) {
     state.user.server = server
+    console.log('server', state.user.server)
     bus.emit('render')
   })
 
@@ -45,20 +46,27 @@ function userModel (state, bus) {
   })
 
   bus.on('user:setLocalPort', function (localport) {
-    state.user.localport = localport
-    LocalSignaling(state.user.localport)
-    bus.emit('user:useLocal')
+    if (localport > 1023 && localport < 49152) {
+      state.user.localport = localport
+      if (state.user.uselocal == 'Local Signaling') {
+        LocalSignaling(state.user.localport)
+        bus.emit('user:setServer', "http://localhost:" + state.user.localport)
+      }
+    } else {state.user.statusMessage = 'Local port must be between 1024 and 49151'}
     bus.emit('render')
   })
 
   bus.on('user:useLocal', function (uselocal) {
     state.user.uselocal = uselocal
     if (state.user.uselocal == 'Local Signaling') {
-      var localServer = "http://localhost:" + state.user.localport
-      bus.emit('user:setServer', localServer)
+      LocalSignaling(state.user.localport)
+      bus.emit('user:setServer', "http://localhost:" + state.user.localport)
+      state.user.statusMessage = 'Ready to use local signaling'
     }
     else {
+      LocalSignaling(0)
       bus.emit('user:setServer', 'https://live-lab-v1.glitch.me/')
+      state.user.statusMessage = 'Ready to use remote signaling'
     }
     bus.emit('render')
   })  
