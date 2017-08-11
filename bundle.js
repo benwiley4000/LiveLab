@@ -9,6 +9,7 @@ const app = choo()
 
 app.use(log())
 app.use(expose())
+// }
 
 app.use(require('./models/devicesModel.js'))
 app.use(require('./models/mediaModel.js'))
@@ -22,7 +23,7 @@ app.use(function (state) {
 })
 
 app.mount('div')
-},{"./models/devicesModel.js":3,"./models/mediaModel.js":4,"./models/peersModel.js":5,"./models/userModel.js":6,"./views/main.js":150,"choo":20,"choo-expose":17,"choo-log":18}],2:[function(require,module,exports){
+},{"./models/devicesModel.js":3,"./models/mediaModel.js":4,"./models/peersModel.js":5,"./models/userModel.js":6,"./views/main.js":149,"choo":20,"choo-expose":17,"choo-log":18}],2:[function(require,module,exports){
 // Module for handling connections to multiple peers
 
 var io = require('socket.io-client')
@@ -265,13 +266,29 @@ function devicesModel (state, bus) {
     }).catch(console.log.bind(console)) // TO DO:: display error to user
   }
 
-  function popupWindow(vidID) {
-    var vidEl = document.getElementById(vidID)
+  function popupWindow(el) {
+    var vidEl = document.getElementById(el.name)
     var ip = window.location.host
-    var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + vidID, 'popup')
-    state.devices.popupwindows[vidID] = popupWindow
-    popupWindow.onload = function(){
-      popupWindow.document.getElementById('showVideo').srcObject = vidEl.srcObject
+    if (el.value == 'Open Window') {
+      var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + el.name, 'fullscreen=yes,toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=no')
+      state.devices.popupwindows[el.name] = popupWindow
+      popupWindow.onload = function(){
+        var winEl = popupWindow.document.getElementById('showVideo')
+        winEl.srcObject = vidEl.srcObject
+        winEl.onloadedmetadata = function(){
+          popupWindow.resizeTo(winEl.videoWidth, winEl.videoHeight)
+        }
+      }
+      popupWindow.onclose = function(){
+        delete state.devices.popupwindows[el.name]
+        el.value = 'Open Window'
+      }
+      el.value = 'Close Window'
+    } else {
+      var popupWindow = state.devices.popupwindows[el.name]
+      popupWindow.close()
+      delete state.devices.popupwindows[el.name]
+      el.value = 'Open Window'
     }
   }
 
@@ -410,7 +427,6 @@ function mediaModel (state, bus) {
     var existingTrack = null
     if (state.peers.byId[peerId] && state.peers.byId[peerId].tracks.length > 0) {
       var tracks = state.peers.byId[peerId].tracks
-      console.log(' comparing : ', tracks, constraints)
       tracks.forEach(function (trackId) {
         var track = state.media.byId[trackId]
       //  console.log("1:", JSON.stringify(constraints))
@@ -520,7 +536,7 @@ function userModel (state, bus) {
     uuid: shortid.generate(), // for dev purposes, always regenerate id
     room: 'Etra',
     nickname: 'artist',
-    server: 'https://localhost:8000/',
+    server: 'https://sweltering-structure.glitch.me/',
     loggedIn: false,
     statusMessage: ''
   }, state.user)
@@ -20092,49 +20108,6 @@ const html = require('choo/html')
 const xtend = require('xtend')
 var Nano = require('nanocomponent')
 
-module.exports = VideoContainer
-
-// Video container component that accepts a mediaStreamTrack as well as display parameters
-function VideoContainer () {
-  if (!(this instanceof VideoContainer)) return new VideoContainer()
-  Nano.call(this)
-}
-
-VideoContainer.prototype = Object.create(Nano.prototype)
-
-VideoContainer.prototype._render = function () {
-  if (!this.element) {
-    var defaultHtmlProps = {
-      autoplay: 'autoplay',
-      muted: 'muted'
-    }
-    var _htmlProps = xtend(defaultHtmlProps, this.props.htmlProps)
-    this.element = html`<video ${_htmlProps}></video>`
-  }
-
-  if (this.props.track && this.props.track != null) {
-    console.log("TRACK ", this.props)
-    var tracks = []
-    tracks.push(this.props.track.track)
-    this._stream = new MediaStream(tracks) // stream must be initialized with tracks, even though documentation says otherwise
-    this.element.srcObject = this._stream
-  }
-
-  return this.element
-}
-
-// call "render" if track property has changed
-VideoContainer.prototype._update = function (props) {
-  return this.props.track !== props.track
-}
-
-},{"choo/html":19,"nanocomponent":68,"xtend":139}],143:[function(require,module,exports){
-'use strict'
-
-const html = require('choo/html')
-const xtend = require('xtend')
-var Nano = require('nanocomponent')
-
 module.exports = AudioContainer
 
 // Video container component that accepts a mediaStreamTrack as well as display parameters
@@ -20171,7 +20144,7 @@ AudioContainer.prototype._update = function (props) {
   return this.props.track !== props.track
 }
 
-},{"choo/html":19,"nanocomponent":68,"xtend":139}],144:[function(require,module,exports){
+},{"choo/html":19,"nanocomponent":68,"xtend":139}],143:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20205,7 +20178,7 @@ function buttonElement (name, defaultText, opts) {
   </div>`
 }
 
-},{"choo/html":19,"xtend":139}],145:[function(require,module,exports){
+},{"choo/html":19,"xtend":139}],144:[function(require,module,exports){
 const microcomponent = require('microcomponent')
 const css = 0
 const html = require('choo/html')
@@ -20274,7 +20247,7 @@ function Dropdown () {
     this.render(this.props)
   }
 }
-},{"choo/html":19,"juliangruber-shallow-equal/objects":61,"microcomponent":63,"sheetify/insert":101}],146:[function(require,module,exports){
+},{"choo/html":19,"juliangruber-shallow-equal/objects":61,"microcomponent":63,"sheetify/insert":101}],145:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20308,7 +20281,7 @@ function inputElement (name, defaultText, opts) {
   </div>`
 }
 
-},{"choo/html":19,"xtend":139}],147:[function(require,module,exports){
+},{"choo/html":19,"xtend":139}],146:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20342,24 +20315,66 @@ function rangeElement (name, defaultText, opts) {
   </div>`
 }
 
-},{"choo/html":19,"xtend":139}],148:[function(require,module,exports){
-arguments[4][142][0].apply(exports,arguments)
-},{"choo/html":19,"dup":142,"nanocomponent":68,"xtend":139}],149:[function(require,module,exports){
+},{"choo/html":19,"xtend":139}],147:[function(require,module,exports){
+'use strict'
+
+const html = require('choo/html')
+const xtend = require('xtend')
+var Nano = require('nanocomponent')
+
+module.exports = VideoContainer
+
+// Video container component that accepts a mediaStreamTrack as well as display parameters
+function VideoContainer () {
+  if (!(this instanceof VideoContainer)) return new VideoContainer()
+  Nano.call(this)
+}
+
+VideoContainer.prototype = Object.create(Nano.prototype)
+
+VideoContainer.prototype._render = function () {
+  if (!this.element) {
+    var defaultHtmlProps = {
+      autoplay: 'autoplay',
+      muted: 'muted'
+    }
+    var _htmlProps = xtend(defaultHtmlProps, this.props.htmlProps)
+    this.element = html`<video ${_htmlProps}></video>`
+  }
+
+  if (this.props.track && this.props.track != null) {
+    console.log("TRACK ", this.props)
+    var tracks = []
+    tracks.push(this.props.track.track)
+    this._stream = new MediaStream(tracks) // stream must be initialized with tracks, even though documentation says otherwise
+    this.element.srcObject = this._stream
+  }
+  return this.element
+}
+
+// call "render" if track property has changed
+VideoContainer.prototype._update = function (props) {
+  return this.props.track !== props.track
+}
+
+},{"choo/html":19,"nanocomponent":68,"xtend":139}],148:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
 const input = require('./components/input.js')
 const button = require('./components/button.js')
 const Dropdown = require('./components/dropdown.js')
-const VideoEl = require('./components/VideoContainer.js')
+const VideoEl = require('./components/videocontainer.js')
 
 module.exports = loginView
 
 const audioDropdown = Dropdown()
 const videoDropdown = Dropdown()
 const defaultVid = VideoEl()
+// const demoVideo = Video()
 
 function loginView (state, emit) {
+//   console.log("media ", state.media)
 
   var audioinput = state.devices.audioinput
   var videoinput = state.devices.videoinput
@@ -20367,6 +20382,7 @@ function loginView (state, emit) {
   var defaultVideo = state.devices.default.videoinput
 
   var peerIndex = state.peers.all
+  console.log('peers ', peerIndex)
 
   return html`
   <div>
@@ -20444,10 +20460,15 @@ function loginView (state, emit) {
   function setLocalPort (e) {
     emit('user:setLocalPort', e.target.value)
   }
- 
+
+  function useLocal (e) {
+    if (e.target.value == 'Local Signaling') {
+      emit('user:useLocal', 'Remote Signaling')
+    } else {emit('user:useLocal', 'Local Signaling')}
+  }   
 }
 
-},{"./components/VideoContainer.js":142,"./components/button.js":144,"./components/dropdown.js":145,"./components/input.js":146,"choo/html":19}],150:[function(require,module,exports){
+},{"./components/button.js":143,"./components/dropdown.js":144,"./components/input.js":145,"./components/videocontainer.js":147,"choo/html":19}],149:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20473,7 +20494,7 @@ function mainView (state, emit) {
   }
 }
 
-},{"./login.js":149,"./session.js":151,"choo/html":19}],151:[function(require,module,exports){
+},{"./login.js":148,"./session.js":150,"choo/html":19}],150:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const VideoEl = require('./components/videocontainer.js')
@@ -20485,49 +20506,52 @@ const MAX_NUM_PEERS = 8 // can be changed (stub for initializing video container
 
 module.exports = sessionView
 
-// initialize peer video holders
-var peerVids = []
-for (var i = 0; i < MAX_NUM_PEERS; i++) {
-  peerVids[i] = new VideoEl()
-}
-
-var peerAuds = []
-for (var i = 0; i < MAX_NUM_PEERS; i++) {
-  peerAuds[i] = new AudioEl()
-}
-
 function sessionView (state, emit) {
+  // initialize peer video holders
+  var peerVids = []
+  for (var i = 0; i < MAX_NUM_PEERS; i++) {
+    peerVids[i] = new VideoEl()
+  }
+
+  var peerAuds = []
+  for (var i = 0; i < MAX_NUM_PEERS; i++) {
+    peerAuds[i] = new AudioEl()
+  }
+
   // create containers for each
   var sessionVids = peerVids.map(function (vidEl, index) {
     var peerIndex = state.peers.all[index]
     if (peerIndex) {
       var videoId = state.peers.byId[peerIndex].defaultTracks.video
-      console.log('videoId ', videoId)
-      return html`
-      <div class="dib w-25 h-inherit">
-        <p> ${state.peers.byId[peerIndex].nickname}</p>
-        ${vidEl.render({
-          htmlProps: {
-            id: videoId,
-            class: 'w-100'
-          },
-          track: state.media.byId[videoId]
-        })}
-        ${button('', 'Popup Window', {
-          value: 'Popup Window',
-          name: videoId,
-          onmouseup: popupWindow,
-          class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
-          divclass: 'dib pr3 pb4'
-        })}
-        ${button('', 'Full Screen', {
-          value: 'Full Screen',
-          name: videoId,
-          onmouseup: fullscreenWindow,
-          class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
-          divclass: 'dib pr3 pb4'
-        })}
-      </div>`
+      if (videoId != null) {
+        return html`
+        <div class="dib w-25 h-inherit">
+          <p> ${state.peers.byId[peerIndex].nickname}</p>
+          ${vidEl.render({
+            htmlProps: {
+              id: videoId,
+              class: 'w-100'
+            },
+            track: state.media.byId[videoId]
+          })}
+
+          ${button('', 'Popup Window', {
+            value: 'Open Window',
+            name: videoId,
+            onmouseup: popupWindow,
+            class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
+            divclass: 'dib pr3 pb4'
+          })}
+          ${button('', 'Full Screen', {
+            value: 'Full Screen',
+            name: videoId,
+            onmouseup: fullscreenWindow,
+            class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
+            divclass: 'dib pr3 pb4'
+          })}
+
+        </div>`
+      }
     } else {
       return null
     }
@@ -20537,26 +20561,28 @@ function sessionView (state, emit) {
     var peerIndex = state.peers.all[index]
     if (peerIndex) {
       var audioId = state.peers.byId[peerIndex].defaultTracks.audio
-      return html`
-      <div class="dib w-25 h-inherit">
-        <p> ${state.peers.byId[peerIndex].nickname}</p>
-        ${audEl.render({
-          htmlProps: {
-            id: audioId
-          },
-          track: state.media.byId[audioId]
-        })}
-        ${range('', 'Level', {
-          value: 0.0,
-          min: 0.0,
-          max: 1.0,
-          step: 0.01,
-          name: audioId,
-          oninput: audioLevel,
-          class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
-          divclass: 'dib pr3 pb4'
-        })}        
-      </div>`
+      if (audioId != null) {
+        return html`
+        <div class="dib w-25 h-inherit">
+          <p> ${state.peers.byId[peerIndex].nickname}</p>
+          ${audEl.render({
+            htmlProps: {
+              id: audioId
+            },
+            track: state.media.byId[audioId]
+          })}
+          ${range('', 'Level', {
+            value: 0.0,
+            min: 0.0,
+            max: 1.0,
+            step: 0.01,
+            name: audioId,
+            oninput: audioLevel,
+            class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
+            divclass: 'dib pr3 pb4'
+          })}        
+        </div>`
+      }
     } else {
       return null
     }
@@ -20567,7 +20593,7 @@ function sessionView (state, emit) {
   }
 
   function popupWindow (e) {
-    emit('devices:popupWindow', e.target.name)
+    emit('devices:popupWindow', e.target)
   }
 
   function fullscreenWindow (e) {
@@ -20587,7 +20613,7 @@ function sessionView (state, emit) {
       <div class="dib w-100 max-h-25">
       <p>AUDIO</p>
         ${sessionAuds}
-      </div> 
+      </div>
     </div> 
     `
 }
@@ -20606,4 +20632,4 @@ function sessionView (state, emit) {
 //     `
 // }
 
-},{"./components/audiocontainer.js":143,"./components/button.js":144,"./components/range.js":147,"./components/videocontainer.js":148,"choo/html":19}]},{},[1]);
+},{"./components/audiocontainer.js":142,"./components/button.js":143,"./components/range.js":146,"./components/videocontainer.js":147,"choo/html":19}]},{},[1]);

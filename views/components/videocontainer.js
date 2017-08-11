@@ -31,7 +31,6 @@ VideoContainer.prototype._render = function () {
     this._stream = new MediaStream(tracks) // stream must be initialized with tracks, even though documentation says otherwise
     this.element.srcObject = this._stream
   }
-
   return this.element
 }
 

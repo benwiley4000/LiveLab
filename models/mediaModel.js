@@ -102,7 +102,6 @@ function mediaModel (state, bus) {
     var existingTrack = null
     if (state.peers.byId[peerId] && state.peers.byId[peerId].tracks.length > 0) {
       var tracks = state.peers.byId[peerId].tracks
-      console.log(' comparing : ', tracks, constraints)
       tracks.forEach(function (trackId) {
         var track = state.media.byId[trackId]
       //  console.log("1:", JSON.stringify(constraints))

@@ -9,49 +9,52 @@ const MAX_NUM_PEERS = 8 // can be changed (stub for initializing video container
 
 module.exports = sessionView
 
-// initialize peer video holders
-var peerVids = []
-for (var i = 0; i < MAX_NUM_PEERS; i++) {
-  peerVids[i] = new VideoEl()
-}
-
-var peerAuds = []
-for (var i = 0; i < MAX_NUM_PEERS; i++) {
-  peerAuds[i] = new AudioEl()
-}
-
 function sessionView (state, emit) {
+  // initialize peer video holders
+  var peerVids = []
+  for (var i = 0; i < MAX_NUM_PEERS; i++) {
+    peerVids[i] = new VideoEl()
+  }
+
+  var peerAuds = []
+  for (var i = 0; i < MAX_NUM_PEERS; i++) {
+    peerAuds[i] = new AudioEl()
+  }
+
   // create containers for each
   var sessionVids = peerVids.map(function (vidEl, index) {
     var peerIndex = state.peers.all[index]
     if (peerIndex) {
       var videoId = state.peers.byId[peerIndex].defaultTracks.video
-      console.log('videoId ', videoId)
-      return html`
-      <div class="dib w-25 h-inherit">
-        <p> ${state.peers.byId[peerIndex].nickname}</p>
-        ${vidEl.render({
-          htmlProps: {
-            id: videoId,
-            class: 'w-100'
-          },
-          track: state.media.byId[videoId]
-        })}
-        ${button('', 'Popup Window', {
-          value: 'Popup Window',
-          name: videoId,
-          onmouseup: popupWindow,
-          class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
-          divclass: 'dib pr3 pb4'
-        })}
-        ${button('', 'Full Screen', {
-          value: 'Full Screen',
-          name: videoId,
-          onmouseup: fullscreenWindow,
-          class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
-          divclass: 'dib pr3 pb4'
-        })}
-      </div>`
+      if (videoId != null) {
+        return html`
+        <div class="dib w-25 h-inherit">
+          <p> ${state.peers.byId[peerIndex].nickname}</p>
+          ${vidEl.render({
+            htmlProps: {
+              id: videoId,
+              class: 'w-100'
+            },
+            track: state.media.byId[videoId]
+          })}
+
+          ${button('', 'Popup Window', {
+            value: 'Open Window',
+            name: videoId,
+            onmouseup: popupWindow,
+            class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
+            divclass: 'dib pr3 pb4'
+          })}
+          ${button('', 'Full Screen', {
+            value: 'Full Screen',
+            name: videoId,
+            onmouseup: fullscreenWindow,
+            class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
+            divclass: 'dib pr3 pb4'
+          })}
+
+        </div>`
+      }
     } else {
       return null
     }
@@ -61,26 +64,28 @@ function sessionView (state, emit) {
     var peerIndex = state.peers.all[index]
     if (peerIndex) {
       var audioId = state.peers.byId[peerIndex].defaultTracks.audio
-      return html`
-      <div class="dib w-25 h-inherit">
-        <p> ${state.peers.byId[peerIndex].nickname}</p>
-        ${audEl.render({
-          htmlProps: {
-            id: audioId
-          },
-          track: state.media.byId[audioId]
-        })}
-        ${range('', 'Level', {
-          value: 0.0,
-          min: 0.0,
-          max: 1.0,
-          step: 0.01,
-          name: audioId,
-          oninput: audioLevel,
-          class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
-          divclass: 'dib pr3 pb4'
-        })}        
-      </div>`
+      if (audioId != null) {
+        return html`
+        <div class="dib w-25 h-inherit">
+          <p> ${state.peers.byId[peerIndex].nickname}</p>
+          ${audEl.render({
+            htmlProps: {
+              id: audioId
+            },
+            track: state.media.byId[audioId]
+          })}
+          ${range('', 'Level', {
+            value: 0.0,
+            min: 0.0,
+            max: 1.0,
+            step: 0.01,
+            name: audioId,
+            oninput: audioLevel,
+            class: 'pa2 input-reset ba bg-dark-gray hover-bg-black near-white w-auto',
+            divclass: 'dib pr3 pb4'
+          })}        
+        </div>`
+      }
     } else {
       return null
     }
@@ -91,7 +96,7 @@ function sessionView (state, emit) {
   }
 
   function popupWindow (e) {
-    emit('devices:popupWindow', e.target.name)
+    emit('devices:popupWindow', e.target)
   }
 
   function fullscreenWindow (e) {
@@ -111,7 +116,7 @@ function sessionView (state, emit) {
       <div class="dib w-100 max-h-25">
       <p>AUDIO</p>
         ${sessionAuds}
-      </div> 
+      </div>
     </div> 
     `
 }

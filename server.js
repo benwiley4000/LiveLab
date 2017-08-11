@@ -40,7 +40,6 @@ io.on('connection', function (socket) {
    
    
      socket.on('join', function(room, _userData) {
-      
        console.log("user", JSON.stringify(_userData))
        if(_userData.uuid){
          userFromSocket[socket.id] = _userData.uuid
@@ -80,7 +79,7 @@ io.on('connection', function (socket) {
     
   
      socket.on('signal', function(data) {
-       console.log("forwarding signal " + JSON.stringify(data))
+      // console.log("forwarding signal " + JSON.stringify(data))
       var client = io.sockets.connected[socketFromUser[data.id]];
       client && client.emit('signal', {
         id: userFromSocket[socket.id],
@@ -88,6 +87,16 @@ io.on('connection', function (socket) {
         signal: data.signal,
       });
     });
+
+     socket.on('disconnect', (reason) => {
+      console.log("socketFromUser", socketFromUser)
+      console.log("userFromSocket", userFromSocket)
+      var uuid = userFromSocket[socket.id]
+      delete socketFromUser[uuid]
+      delete userFromSocket[socket.id]
+      console.log("socketFromUser", socketFromUser)
+      console.log("userFromSocket", userFromSocket)
+     })
 
 
     ///TO DO: on disconnect, remove from label dictionary

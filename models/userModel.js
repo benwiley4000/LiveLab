@@ -13,7 +13,7 @@ function userModel (state, bus) {
     uuid: shortid.generate(), // for dev purposes, always regenerate id
     room: 'Etra',
     nickname: 'artist',
-    server: 'https://localhost:8000/',
+    server: 'https://sweltering-structure.glitch.me/',
     loggedIn: false,
     statusMessage: ''
   }, state.user)

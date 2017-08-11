@@ -8,6 +8,7 @@ const app = choo()
 
 app.use(log())
 app.use(expose())
+// }
 
 app.use(require('./models/devicesModel.js'))
 app.use(require('./models/mediaModel.js'))

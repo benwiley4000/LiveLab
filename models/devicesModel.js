@@ -116,13 +116,29 @@ function devicesModel (state, bus) {
     }).catch(console.log.bind(console)) // TO DO:: display error to user
   }
 
-  function popupWindow(vidID) {
-    var vidEl = document.getElementById(vidID)
+  function popupWindow(el) {
+    var vidEl = document.getElementById(el.name)
     var ip = window.location.host
-    var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + vidID, 'popup')
-    state.devices.popupwindows[vidID] = popupWindow
-    popupWindow.onload = function(){
-      popupWindow.document.getElementById('showVideo').srcObject = vidEl.srcObject
+    if (el.value == 'Open Window') {
+      var popupWindow = window.open("https://" + ip + "/show.html", 'Win_' + el.name, 'fullscreen=yes,toolbar=no,location=no,directories=no,status=no,menubar=no,scrollbars=no,resizable=no')
+      state.devices.popupwindows[el.name] = popupWindow
+      popupWindow.onload = function(){
+        var winEl = popupWindow.document.getElementById('showVideo')
+        winEl.srcObject = vidEl.srcObject
+        winEl.onloadedmetadata = function(){
+          popupWindow.resizeTo(winEl.videoWidth, winEl.videoHeight)
+        }
+      }
+      popupWindow.onclose = function(){
+        delete state.devices.popupwindows[el.name]
+        el.value = 'Open Window'
+      }
+      el.value = 'Close Window'
+    } else {
+      var popupWindow = state.devices.popupwindows[el.name]
+      popupWindow.close()
+      delete state.devices.popupwindows[el.name]
+      el.value = 'Open Window'
     }
   }
 

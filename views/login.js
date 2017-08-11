@@ -4,15 +4,17 @@ const html = require('choo/html')
 const input = require('./components/input.js')
 const button = require('./components/button.js')
 const Dropdown = require('./components/dropdown.js')
-const VideoEl = require('./components/VideoContainer.js')
+const VideoEl = require('./components/videocontainer.js')
 
 module.exports = loginView
 
 const audioDropdown = Dropdown()
 const videoDropdown = Dropdown()
 const defaultVid = VideoEl()
+// const demoVideo = Video()
 
 function loginView (state, emit) {
+//   console.log("media ", state.media)
 
   var audioinput = state.devices.audioinput
   var videoinput = state.devices.videoinput
@@ -20,6 +22,7 @@ function loginView (state, emit) {
   var defaultVideo = state.devices.default.videoinput
 
   var peerIndex = state.peers.all
+  console.log('peers ', peerIndex)
 
   return html`
   <div>
@@ -97,5 +100,10 @@ function loginView (state, emit) {
   function setLocalPort (e) {
     emit('user:setLocalPort', e.target.value)
   }
- 
+
+  function useLocal (e) {
+    if (e.target.value == 'Local Signaling') {
+      emit('user:useLocal', 'Remote Signaling')
+    } else {emit('user:useLocal', 'Local Signaling')}
+  }   
 }
