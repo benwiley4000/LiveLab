@@ -26,7 +26,7 @@ if (isElectron()) {
 
 app.mount('body div')
 
-},{"./models/devicesModel.js":4,"./models/mediaModel.js":5,"./models/peersModel.js":6,"./models/uiModel.js":7,"./models/userModel.js":8,"./views/main.js":155,"choo":22,"choo-expose":19,"choo-log":20}],2:[function(require,module,exports){
+},{"./models/devicesModel.js":4,"./models/mediaModel.js":5,"./models/peersModel.js":6,"./models/uiModel.js":7,"./models/userModel.js":8,"./views/main.js":160,"choo":23,"choo-expose":20,"choo-log":21}],2:[function(require,module,exports){
 // Module for handling connections to multiple peers
 
 var io = require('socket.io-client')
@@ -162,7 +162,7 @@ MultiPeer.prototype._destroy = function () {
 
 module.exports = MultiPeer
 
-},{"events":46,"inherits":59,"simple-peer":110,"socket.io-client":111}],3:[function(require,module,exports){
+},{"events":46,"inherits":59,"simple-peer":115,"socket.io-client":116}],3:[function(require,module,exports){
 module.exports=/*
   Options for constraints as defined in: https://w3c.github.io/mediacapture-main/getusermedia.html
   constraints not added: latency, facingMode, sampleRate, sampleSize, volume
@@ -990,7 +990,7 @@ function updateLocalInfo(id){
   }
 }
 
-},{"./../lib/MultiPeer.js":2,"shortid":100}],9:[function(require,module,exports){
+},{"./../lib/MultiPeer.js":2,"shortid":105}],9:[function(require,module,exports){
 module.exports = after
 
 function after(count, callback, err_cb) {
@@ -1545,7 +1545,7 @@ var objectKeys = Object.keys || function (obj) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"util/":125}],12:[function(require,module,exports){
+},{"util/":130}],12:[function(require,module,exports){
 
 /**
  * Expose `Backoff`.
@@ -1972,7 +1972,7 @@ module.exports = hyperx(belCreateElement, {comments: true})
 module.exports.default = module.exports
 module.exports.createElement = belCreateElement
 
-},{"global/document":50,"hyperx":56,"on-load":78}],16:[function(require,module,exports){
+},{"global/document":50,"hyperx":56,"on-load":83}],16:[function(require,module,exports){
 (function (global){
 /**
  * Create a blob builder even when vendor prefixes exist
@@ -2075,6 +2075,192 @@ module.exports = (function() {
 },{}],17:[function(require,module,exports){
 
 },{}],18:[function(require,module,exports){
+// shim for using process in browser
+var process = module.exports = {};
+
+// cached from whatever global is present so that test runners that stub it
+// don't break things.  But we need to wrap it in a try catch in case it is
+// wrapped in strict mode code which doesn't define any globals.  It's inside a
+// function because try/catches deoptimize in certain engines.
+
+var cachedSetTimeout;
+var cachedClearTimeout;
+
+function defaultSetTimout() {
+    throw new Error('setTimeout has not been defined');
+}
+function defaultClearTimeout () {
+    throw new Error('clearTimeout has not been defined');
+}
+(function () {
+    try {
+        if (typeof setTimeout === 'function') {
+            cachedSetTimeout = setTimeout;
+        } else {
+            cachedSetTimeout = defaultSetTimout;
+        }
+    } catch (e) {
+        cachedSetTimeout = defaultSetTimout;
+    }
+    try {
+        if (typeof clearTimeout === 'function') {
+            cachedClearTimeout = clearTimeout;
+        } else {
+            cachedClearTimeout = defaultClearTimeout;
+        }
+    } catch (e) {
+        cachedClearTimeout = defaultClearTimeout;
+    }
+} ())
+function runTimeout(fun) {
+    if (cachedSetTimeout === setTimeout) {
+        //normal enviroments in sane situations
+        return setTimeout(fun, 0);
+    }
+    // if setTimeout wasn't available but was latter defined
+    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
+        cachedSetTimeout = setTimeout;
+        return setTimeout(fun, 0);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedSetTimeout(fun, 0);
+    } catch(e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
+            return cachedSetTimeout.call(null, fun, 0);
+        } catch(e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
+            return cachedSetTimeout.call(this, fun, 0);
+        }
+    }
+
+
+}
+function runClearTimeout(marker) {
+    if (cachedClearTimeout === clearTimeout) {
+        //normal enviroments in sane situations
+        return clearTimeout(marker);
+    }
+    // if clearTimeout wasn't available but was latter defined
+    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
+        cachedClearTimeout = clearTimeout;
+        return clearTimeout(marker);
+    }
+    try {
+        // when when somebody has screwed with setTimeout but no I.E. maddness
+        return cachedClearTimeout(marker);
+    } catch (e){
+        try {
+            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
+            return cachedClearTimeout.call(null, marker);
+        } catch (e){
+            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
+            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
+            return cachedClearTimeout.call(this, marker);
+        }
+    }
+
+
+
+}
+var queue = [];
+var draining = false;
+var currentQueue;
+var queueIndex = -1;
+
+function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
+    draining = false;
+    if (currentQueue.length) {
+        queue = currentQueue.concat(queue);
+    } else {
+        queueIndex = -1;
+    }
+    if (queue.length) {
+        drainQueue();
+    }
+}
+
+function drainQueue() {
+    if (draining) {
+        return;
+    }
+    var timeout = runTimeout(cleanUpNextTick);
+    draining = true;
+
+    var len = queue.length;
+    while(len) {
+        currentQueue = queue;
+        queue = [];
+        while (++queueIndex < len) {
+            if (currentQueue) {
+                currentQueue[queueIndex].run();
+            }
+        }
+        queueIndex = -1;
+        len = queue.length;
+    }
+    currentQueue = null;
+    draining = false;
+    runClearTimeout(timeout);
+}
+
+process.nextTick = function (fun) {
+    var args = new Array(arguments.length - 1);
+    if (arguments.length > 1) {
+        for (var i = 1; i < arguments.length; i++) {
+            args[i - 1] = arguments[i];
+        }
+    }
+    queue.push(new Item(fun, args));
+    if (queue.length === 1 && !draining) {
+        runTimeout(drainQueue);
+    }
+};
+
+// v8 likes predictible objects
+function Item(fun, array) {
+    this.fun = fun;
+    this.array = array;
+}
+Item.prototype.run = function () {
+    this.fun.apply(null, this.array);
+};
+process.title = 'browser';
+process.browser = true;
+process.env = {};
+process.argv = [];
+process.version = ''; // empty string to avoid regexp issues
+process.versions = {};
+
+function noop() {}
+
+process.on = noop;
+process.addListener = noop;
+process.once = noop;
+process.off = noop;
+process.removeListener = noop;
+process.removeAllListeners = noop;
+process.emit = noop;
+process.prependListener = noop;
+process.prependOnceListener = noop;
+
+process.listeners = function (name) { return [] }
+
+process.binding = function (name) {
+    throw new Error('process.binding is not supported');
+};
+
+process.cwd = function () { return '/' };
+process.chdir = function (dir) {
+    throw new Error('process.chdir is not supported');
+};
+process.umask = function() { return 0; };
+
+},{}],19:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -3790,7 +3976,7 @@ function numberIsNaN (obj) {
   return obj !== obj // eslint-disable-line no-self-compare
 }
 
-},{"base64-js":14,"ieee754":57}],19:[function(require,module,exports){
+},{"base64-js":14,"ieee754":57}],20:[function(require,module,exports){
 var removeItems = require('remove-array-items')
 var onIdle = require('on-idle')
 var stateCopy = require('state-copy')
@@ -3856,7 +4042,7 @@ function Event (name, data) {
   this.data = data
 }
 
-},{"on-idle":77,"plucker":82,"remove-array-items":96,"state-copy":120}],20:[function(require,module,exports){
+},{"on-idle":82,"plucker":87,"remove-array-items":101,"state-copy":125}],21:[function(require,module,exports){
 var nanologger = require('nanologger')
 
 module.exports = logger
@@ -3929,10 +4115,10 @@ function logger (opts) {
   }
 }
 
-},{"nanologger":69}],21:[function(require,module,exports){
+},{"nanologger":74}],22:[function(require,module,exports){
 module.exports = require('bel')
 
-},{"bel":15}],22:[function(require,module,exports){
+},{"bel":15}],23:[function(require,module,exports){
 var documentReady = require('document-ready')
 var nanohistory = require('nanohistory')
 var nanorouter = require('nanorouter')
@@ -4072,7 +4258,7 @@ function createLocation () {
   return pathname + hash
 }
 
-},{"assert":11,"document-ready":31,"nanobus":65,"nanohistory":67,"nanohref":68,"nanomorph":70,"nanomount":73,"nanoraf":74,"nanorouter":75}],23:[function(require,module,exports){
+},{"assert":11,"document-ready":31,"nanobus":66,"nanohistory":72,"nanohref":73,"nanomorph":75,"nanomount":78,"nanoraf":79,"nanorouter":80}],24:[function(require,module,exports){
 /**
  * Slice reference.
  */
@@ -4097,7 +4283,7 @@ module.exports = function(obj, fn){
   }
 };
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -4262,7 +4448,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 
 module.exports = function(a, b){
   var fn = function(){};
@@ -4270,7 +4456,7 @@ module.exports = function(a, b){
   a.prototype = new fn;
   a.prototype.constructor = a;
 };
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 module.exports = input => {
 	const el = document.createElement('textarea');
@@ -4313,7 +4499,7 @@ module.exports = input => {
 	return success;
 };
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -4424,161 +4610,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../is-buffer/index.js")})
-},{"../../is-buffer/index.js":61}],28:[function(require,module,exports){
-/**
- * Helpers.
- */
-
-var s = 1000;
-var m = s * 60;
-var h = m * 60;
-var d = h * 24;
-var y = d * 365.25;
-
-/**
- * Parse or format the given `val`.
- *
- * Options:
- *
- *  - `long` verbose formatting [false]
- *
- * @param {String|Number} val
- * @param {Object} [options]
- * @throws {Error} throw an error if val is not a non-empty string or a number
- * @return {String|Number}
- * @api public
- */
-
-module.exports = function(val, options) {
-  options = options || {};
-  var type = typeof val;
-  if (type === 'string' && val.length > 0) {
-    return parse(val);
-  } else if (type === 'number' && isNaN(val) === false) {
-    return options.long ? fmtLong(val) : fmtShort(val);
-  }
-  throw new Error(
-    'val is not a non-empty string or a valid number. val=' +
-      JSON.stringify(val)
-  );
-};
-
-/**
- * Parse the given `str` and return milliseconds.
- *
- * @param {String} str
- * @return {Number}
- * @api private
- */
-
-function parse(str) {
-  str = String(str);
-  if (str.length > 100) {
-    return;
-  }
-  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(
-    str
-  );
-  if (!match) {
-    return;
-  }
-  var n = parseFloat(match[1]);
-  var type = (match[2] || 'ms').toLowerCase();
-  switch (type) {
-    case 'years':
-    case 'year':
-    case 'yrs':
-    case 'yr':
-    case 'y':
-      return n * y;
-    case 'days':
-    case 'day':
-    case 'd':
-      return n * d;
-    case 'hours':
-    case 'hour':
-    case 'hrs':
-    case 'hr':
-    case 'h':
-      return n * h;
-    case 'minutes':
-    case 'minute':
-    case 'mins':
-    case 'min':
-    case 'm':
-      return n * m;
-    case 'seconds':
-    case 'second':
-    case 'secs':
-    case 'sec':
-    case 's':
-      return n * s;
-    case 'milliseconds':
-    case 'millisecond':
-    case 'msecs':
-    case 'msec':
-    case 'ms':
-      return n;
-    default:
-      return undefined;
-  }
-}
-
-/**
- * Short format for `ms`.
- *
- * @param {Number} ms
- * @return {String}
- * @api private
- */
-
-function fmtShort(ms) {
-  if (ms >= d) {
-    return Math.round(ms / d) + 'd';
-  }
-  if (ms >= h) {
-    return Math.round(ms / h) + 'h';
-  }
-  if (ms >= m) {
-    return Math.round(ms / m) + 'm';
-  }
-  if (ms >= s) {
-    return Math.round(ms / s) + 's';
-  }
-  return ms + 'ms';
-}
-
-/**
- * Long format for `ms`.
- *
- * @param {Number} ms
- * @return {String}
- * @api private
- */
-
-function fmtLong(ms) {
-  return plural(ms, d, 'day') ||
-    plural(ms, h, 'hour') ||
-    plural(ms, m, 'minute') ||
-    plural(ms, s, 'second') ||
-    ms + ' ms';
-}
-
-/**
- * Pluralization helper.
- */
-
-function plural(ms, n, name) {
-  if (ms < n) {
-    return;
-  }
-  if (ms < n * 1.5) {
-    return Math.floor(ms / n) + ' ' + name;
-  }
-  return Math.ceil(ms / n) + ' ' + name + 's';
-}
-
-},{}],29:[function(require,module,exports){
+},{"../../is-buffer/index.js":61}],29:[function(require,module,exports){
 (function (process){
 /**
  * This is the web browser implementation of `debug()`.
@@ -4767,7 +4799,7 @@ function localstorage() {
 }
 
 }).call(this,require('_process'))
-},{"./debug":30,"_process":84}],30:[function(require,module,exports){
+},{"./debug":30,"_process":18}],30:[function(require,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -4971,7 +5003,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":28}],31:[function(require,module,exports){
+},{"ms":64}],31:[function(require,module,exports){
 'use strict'
 
 var assert = require('assert')
@@ -5754,7 +5786,7 @@ Socket.prototype.filterUpgrades = function (upgrades) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./transport":35,"./transports/index":36,"component-emitter":24,"debug":29,"engine.io-parser":42,"indexof":58,"parsejson":79,"parseqs":80,"parseuri":81}],35:[function(require,module,exports){
+},{"./transport":35,"./transports/index":36,"component-emitter":25,"debug":29,"engine.io-parser":42,"indexof":58,"parsejson":84,"parseqs":85,"parseuri":86}],35:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -5913,7 +5945,7 @@ Transport.prototype.onClose = function () {
   this.emit('close');
 };
 
-},{"component-emitter":24,"engine.io-parser":42}],36:[function(require,module,exports){
+},{"component-emitter":25,"engine.io-parser":42}],36:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies
@@ -6205,7 +6237,7 @@ JSONPPolling.prototype.doWrite = function (data, fn) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":39,"component-inherit":25}],38:[function(require,module,exports){
+},{"./polling":39,"component-inherit":26}],38:[function(require,module,exports){
 (function (global){
 /**
  * Module requirements.
@@ -6622,7 +6654,7 @@ function unloadHandler () {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./polling":39,"component-emitter":24,"component-inherit":25,"debug":29,"xmlhttprequest-ssl":41}],39:[function(require,module,exports){
+},{"./polling":39,"component-emitter":25,"component-inherit":26,"debug":29,"xmlhttprequest-ssl":41}],39:[function(require,module,exports){
 /**
  * Module dependencies.
  */
@@ -6869,7 +6901,7 @@ Polling.prototype.uri = function () {
   return schema + '://' + (ipv6 ? '[' + this.hostname + ']' : this.hostname) + port + this.path + query;
 };
 
-},{"../transport":35,"component-inherit":25,"debug":29,"engine.io-parser":42,"parseqs":80,"xmlhttprequest-ssl":41,"yeast":139}],40:[function(require,module,exports){
+},{"../transport":35,"component-inherit":26,"debug":29,"engine.io-parser":42,"parseqs":85,"xmlhttprequest-ssl":41,"yeast":144}],40:[function(require,module,exports){
 (function (global){
 /**
  * Module dependencies.
@@ -7159,7 +7191,7 @@ WS.prototype.check = function () {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"../transport":35,"component-inherit":25,"debug":29,"engine.io-parser":42,"parseqs":80,"ws":17,"yeast":139}],41:[function(require,module,exports){
+},{"../transport":35,"component-inherit":26,"debug":29,"engine.io-parser":42,"parseqs":85,"ws":17,"yeast":144}],41:[function(require,module,exports){
 (function (global){
 // browser shim for xmlhttprequest module
 
@@ -8591,7 +8623,7 @@ module.exports = function (constraints, cb) {
     });
 };
 
-},{"webrtc-adapter":128}],50:[function(require,module,exports){
+},{"webrtc-adapter":133}],50:[function(require,module,exports){
 (function (global){
 var topLevel = typeof global !== 'undefined' ? global :
     typeof window !== 'undefined' ? window : {}
@@ -9228,8 +9260,6 @@ function isSlowBuffer (obj) {
 }
 
 },{}],62:[function(require,module,exports){
-arguments[4][53][0].apply(exports,arguments)
-},{"dup":53}],63:[function(require,module,exports){
 var is = require('./is')
 
 module.exports = function shallowEqualObjects(objA, objB) {
@@ -9256,7 +9286,7 @@ module.exports = function shallowEqualObjects(objA, objB) {
   return true;
 };
 
-},{"./is":64}],64:[function(require,module,exports){
+},{"./is":63}],63:[function(require,module,exports){
 const hasElement = typeof Element !== 'undefined'
 
 module.exports = function is(a, b) {
@@ -9268,7 +9298,185 @@ module.exports = function is(a, b) {
   return a === b;
 }
 
+},{}],64:[function(require,module,exports){
+/**
+ * Helpers.
+ */
+
+var s = 1000;
+var m = s * 60;
+var h = m * 60;
+var d = h * 24;
+var y = d * 365.25;
+
+/**
+ * Parse or format the given `val`.
+ *
+ * Options:
+ *
+ *  - `long` verbose formatting [false]
+ *
+ * @param {String|Number} val
+ * @param {Object} [options]
+ * @throws {Error} throw an error if val is not a non-empty string or a number
+ * @return {String|Number}
+ * @api public
+ */
+
+module.exports = function(val, options) {
+  options = options || {};
+  var type = typeof val;
+  if (type === 'string' && val.length > 0) {
+    return parse(val);
+  } else if (type === 'number' && isNaN(val) === false) {
+    return options.long ? fmtLong(val) : fmtShort(val);
+  }
+  throw new Error(
+    'val is not a non-empty string or a valid number. val=' +
+      JSON.stringify(val)
+  );
+};
+
+/**
+ * Parse the given `str` and return milliseconds.
+ *
+ * @param {String} str
+ * @return {Number}
+ * @api private
+ */
+
+function parse(str) {
+  str = String(str);
+  if (str.length > 100) {
+    return;
+  }
+  var match = /^((?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|years?|yrs?|y)?$/i.exec(
+    str
+  );
+  if (!match) {
+    return;
+  }
+  var n = parseFloat(match[1]);
+  var type = (match[2] || 'ms').toLowerCase();
+  switch (type) {
+    case 'years':
+    case 'year':
+    case 'yrs':
+    case 'yr':
+    case 'y':
+      return n * y;
+    case 'days':
+    case 'day':
+    case 'd':
+      return n * d;
+    case 'hours':
+    case 'hour':
+    case 'hrs':
+    case 'hr':
+    case 'h':
+      return n * h;
+    case 'minutes':
+    case 'minute':
+    case 'mins':
+    case 'min':
+    case 'm':
+      return n * m;
+    case 'seconds':
+    case 'second':
+    case 'secs':
+    case 'sec':
+    case 's':
+      return n * s;
+    case 'milliseconds':
+    case 'millisecond':
+    case 'msecs':
+    case 'msec':
+    case 'ms':
+      return n;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Short format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function fmtShort(ms) {
+  if (ms >= d) {
+    return Math.round(ms / d) + 'd';
+  }
+  if (ms >= h) {
+    return Math.round(ms / h) + 'h';
+  }
+  if (ms >= m) {
+    return Math.round(ms / m) + 'm';
+  }
+  if (ms >= s) {
+    return Math.round(ms / s) + 's';
+  }
+  return ms + 'ms';
+}
+
+/**
+ * Long format for `ms`.
+ *
+ * @param {Number} ms
+ * @return {String}
+ * @api private
+ */
+
+function fmtLong(ms) {
+  return plural(ms, d, 'day') ||
+    plural(ms, h, 'hour') ||
+    plural(ms, m, 'minute') ||
+    plural(ms, s, 'second') ||
+    ms + ' ms';
+}
+
+/**
+ * Pluralization helper.
+ */
+
+function plural(ms, n, name) {
+  if (ms < n) {
+    return;
+  }
+  if (ms < n * 1.5) {
+    return Math.floor(ms / n) + ' ' + name;
+  }
+  return Math.ceil(ms / n) + ' ' + name + 's';
+}
+
 },{}],65:[function(require,module,exports){
+assert.notEqual = notEqual
+assert.notOk = notOk
+assert.equal = equal
+assert.ok = assert
+
+module.exports = assert
+
+function equal (a, b, m) {
+  assert(a == b, m) // eslint-disable-line eqeqeq
+}
+
+function notEqual (a, b, m) {
+  assert(a != b, m) // eslint-disable-line eqeqeq
+}
+
+function notOk (t, m) {
+  assert(!t, m)
+}
+
+function assert (t, m) {
+  if (!t) throw new Error(m || 'AssertionError')
+}
+
+},{}],66:[function(require,module,exports){
 var nanotiming = require('nanotiming')
 var assert = require('assert')
 
@@ -9416,93 +9624,545 @@ Nanobus.prototype._emit = function (arr, eventName, data) {
   }
 }
 
-},{"assert":11,"nanotiming":76}],66:[function(require,module,exports){
+},{"assert":11,"nanotiming":81}],67:[function(require,module,exports){
+var document = require('global/document')
+var nanotiming = require('nanotiming')
+var morph = require('nanomorph')
 var onload = require('on-load')
 var assert = require('assert')
 
-var KEY = 'ncid-' + (new Date() % 9e6).toString(36)
-var INDEX = 0
-
 module.exports = Nanocomponent
 
-function Nanocomponent () {
+function makeID () {
+  return 'ncid-' + Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)
+}
+
+function Nanocomponent (name) {
   this._hasWindow = typeof window !== 'undefined'
-  this._ID = KEY + '-' + INDEX++
-  this._placeholder = null
-  this._onload = onload
-  this._element = null
-  this._loaded = false
-  this.props = {}
-  this.oldProps = null
-  this.state = {}
-}
+  this._id = null // represents the id of the root node
+  this._ncID = null // internal nanocomponent id
+  this._proxy = null
+  this._loaded = false // Used to debounce on-load when child-reordering
+  this._rootNodeName = null
+  this._name = name || 'nanocomponent'
+  this._rerender = false
 
-Nanocomponent.prototype._ensureID = function () {
-  // Get ID - needed for nanomorph child element reordering
-  var id = this._element.getAttribute('id')
-  if (!id) this._element.setAttribute('id', this._ID)
-  else this._ID = id
-}
+  this._handleLoad = this._handleLoad.bind(this)
+  this._handleUnload = this._handleUnload.bind(this)
 
-Nanocomponent.prototype._rerender = function (props) {
-  this.oldProps = this.props
-  this.props = props
-  this._element = this._render()
-  this._ensureID()
-}
-
-Nanocomponent.prototype.render = function (props) {
-  assert.equal(typeof this._render, 'function', 'nanocomponent: this._render should be implemented')
-  assert.equal(typeof this._update, 'function', 'nanocomponent: this._update should be implemented')
+  this._arguments = []
 
   var self = this
-  var len = arguments.length
-  var args = new Array(len)
-  for (var i = 0; i < len; i++) args[i] = arguments[i]
 
-  if (!this._hasWindow) {
-    this._rerender(props)
-    return this._element
-  } else if (!this._element) {
-    this._rerender(props)
-    this._onload(this._element, function () {
-      self._loaded = true
-      if (self._load) {
-        window.requestAnimationFrame(function () {
-          self._load()
-        })
-      }
-    }, function () {
-      self._loaded = false
-      if (self._unload) {
-        window.requestAnimationFrame(function () {
-          self._unload()
-        })
-      }
-    })
-    return this._element
-  } else {
-    var shouldUpdate = this._update(props)
-    if (shouldUpdate) {
-      this._rerender(props)
+  Object.defineProperty(this, 'element', {
+    get: function () {
+      var el = document.getElementById(self._id)
+      if (el) return el.dataset.nanocomponent === self._ncID ? el : undefined
     }
-    if (!this._placeholder) this._placeholder = this._createPlaceholder()
-    return this._placeholder
-  }
+  })
 }
 
-Nanocomponent.prototype._createPlaceholder = function () {
-  var el = document.createElement('div')
-  el.setAttribute('data-nanocomponent', '')
-  el.setAttribute('id', this._ID)
+Nanocomponent.prototype.render = function () {
+  var timing = nanotiming(this._name + '.render')
   var self = this
-  el.isSameNode = function (el) {
-    return el === self._element
+  var args = new Array(arguments.length)
+  var el
+  for (var i = 0; i < arguments.length; i++) args[i] = arguments[i]
+  if (!this._hasWindow) {
+    el = this.createElement.apply(this, args)
+    timing()
+    return el
+  } else if (this.element) {
+    var shouldUpdate = this._rerender || this.update.apply(this, args)
+    if (this._rerender) this._render = false
+    if (shouldUpdate) {
+      morph(this.element, this._handleRender(args))
+      if (this.afterupdate) this.afterupdate(this.element)
+    }
+    if (!this._proxy) { this._proxy = this._createProxy() }
+    timing()
+    return this._proxy
+  } else {
+    this._reset()
+    el = this._handleRender(args)
+    if (this.beforerender) this.beforerender(el)
+    if (this.load || this.unload || this.afterrreorder) {
+      onload(el, self._handleLoad, self._handleUnload, self)
+    }
+    timing()
+    return el
   }
-  return el
 }
 
-},{"assert":11,"on-load":78}],67:[function(require,module,exports){
+Nanocomponent.prototype.rerender = function () {
+  assert(this.element, 'nanocomponent: cant rerender on an unmounted dom node')
+  this._rerender = true
+  this.render.apply(this, this._arguments)
+}
+
+Nanocomponent.prototype._handleRender = function (args) {
+  var el = this.createElement.apply(this, args)
+  if (!this._rootNodeName) this._rootNodeName = el.nodeName
+  assert(el instanceof window.HTMLElement, 'nanocomponent: createElement should return a DOM node')
+  assert.equal(this._rootNodeName, el.nodeName, 'nanocomponent: root node types cannot differ between re-renders')
+  this._arguments = args
+  return this._brandNode(this._ensureID(el))
+}
+
+Nanocomponent.prototype._createProxy = function () {
+  var proxy = document.createElement('div')
+  var self = this
+  this._brandNode(proxy)
+  proxy.id = this._id
+  proxy.setAttribute('data-proxy', '')
+  proxy.isSameNode = function (el) {
+    return (el && el.dataset.nanocomponent === self._ncID)
+  }
+  return proxy
+}
+
+Nanocomponent.prototype._reset = function () {
+  this._ncID = makeID()
+  this._id = null
+  this._proxy = null
+  this._rootNodeName = null
+}
+
+Nanocomponent.prototype._brandNode = function (node) {
+  node.setAttribute('data-nanocomponent', this._ncID)
+  return node
+}
+
+Nanocomponent.prototype._ensureID = function (node) {
+  if (node.id) this._id = node.id
+  else node.id = this._id = this._ncID
+  return node
+}
+
+Nanocomponent.prototype._handleLoad = function (el) {
+  var self = this
+  if (this._loaded) {
+    if (this.afterreorder) window.requestAnimationFrame(function () { self.afterreorder(el) })
+    return // Debounce child-reorders
+  }
+  this._loaded = true
+  if (this.load) window.requestAnimationFrame(function () { self.load(el) })
+}
+
+Nanocomponent.prototype._handleUnload = function (el) {
+  var self = this
+  if (this.element) return // Debounce child-reorders
+  this._loaded = false
+  if (this.unload) window.requestAnimationFrame(function () { self.unload(el) })
+}
+
+Nanocomponent.prototype.createElement = function () {
+  throw new Error('nanocomponent: createElement should be implemented!')
+}
+
+Nanocomponent.prototype.update = function () {
+  throw new Error('nanocomponent: update should be implemented!')
+}
+
+},{"assert":65,"global/document":50,"nanomorph":68,"nanotiming":71,"on-load":83}],68:[function(require,module,exports){
+var assert = require('assert')
+var morph = require('./lib/morph')
+
+var TEXT_NODE = 3
+// var DEBUG = false
+
+module.exports = nanomorph
+
+// Morph one tree into another tree
+//
+// no parent
+//   -> same: diff and walk children
+//   -> not same: replace and return
+// old node doesn't exist
+//   -> insert new node
+// new node doesn't exist
+//   -> delete old node
+// nodes are not the same
+//   -> diff nodes and apply patch to old node
+// nodes are the same
+//   -> walk all child nodes and append to old node
+function nanomorph (oldTree, newTree) {
+  // if (DEBUG) {
+  //   console.log(
+  //   'nanomorph\nold\n  %s\nnew\n  %s',
+  //   oldTree && oldTree.outerHTML,
+  //   newTree && newTree.outerHTML
+  // )
+  // }
+  assert.equal(typeof oldTree, 'object', 'nanomorph: oldTree should be an object')
+  assert.equal(typeof newTree, 'object', 'nanomorph: newTree should be an object')
+  var tree = walk(newTree, oldTree)
+  // if (DEBUG) console.log('=> morphed\n  %s', tree.outerHTML)
+  return tree
+}
+
+// Walk and morph a dom tree
+function walk (newNode, oldNode) {
+  // if (DEBUG) {
+  //   console.log(
+  //   'walk\nold\n  %s\nnew\n  %s',
+  //   oldNode && oldNode.outerHTML,
+  //   newNode && newNode.outerHTML
+  // )
+  // }
+  if (!oldNode) {
+    return newNode
+  } else if (!newNode) {
+    return null
+  } else if (newNode.isSameNode && newNode.isSameNode(oldNode)) {
+    return oldNode
+  } else if (newNode.tagName !== oldNode.tagName) {
+    return newNode
+  } else {
+    morph(newNode, oldNode)
+    updateChildren(newNode, oldNode)
+    return oldNode
+  }
+}
+
+// Update the children of elements
+// (obj, obj) -> null
+function updateChildren (newNode, oldNode) {
+  // if (DEBUG) {
+  //   console.log(
+  //   'updateChildren\nold\n  %s\nnew\n  %s',
+  //   oldNode && oldNode.outerHTML,
+  //   newNode && newNode.outerHTML
+  // )
+  // }
+  var oldChild, newChild, morphed, oldMatch
+
+  // The offset is only ever increased, and used for [i - offset] in the loop
+  var offset = 0
+
+  for (var i = 0; ; i++) {
+    oldChild = oldNode.childNodes[i]
+    newChild = newNode.childNodes[i - offset]
+    // if (DEBUG) {
+    //   console.log(
+    //   '===\n- old\n  %s\n- new\n  %s',
+    //   oldChild && oldChild.outerHTML,
+    //   newChild && newChild.outerHTML
+    // )
+    // }
+    // Both nodes are empty, do nothing
+    if (!oldChild && !newChild) {
+      break
+
+    // There is no new child, remove old
+    } else if (!newChild) {
+      oldNode.removeChild(oldChild)
+      i--
+
+    // There is no old child, add new
+    } else if (!oldChild) {
+      oldNode.appendChild(newChild)
+      offset++
+
+    // Both nodes are the same, morph
+    } else if (same(newChild, oldChild)) {
+      morphed = walk(newChild, oldChild)
+      if (morphed !== oldChild) {
+        oldNode.replaceChild(morphed, oldChild)
+        offset++
+      }
+
+    // Both nodes do not share an ID or a placeholder, try reorder
+    } else {
+      oldMatch = null
+
+      // Try and find a similar node somewhere in the tree
+      for (var j = i; j < oldNode.childNodes.length; j++) {
+        if (same(oldNode.childNodes[j], newChild)) {
+          oldMatch = oldNode.childNodes[j]
+          break
+        }
+      }
+
+      // If there was a node with the same ID or placeholder in the old list
+      if (oldMatch) {
+        morphed = walk(newChild, oldMatch)
+        if (morphed !== oldMatch) offset++
+        oldNode.insertBefore(morphed, oldChild)
+
+      // It's safe to morph two nodes in-place if neither has an ID
+      } else if (!newChild.id && !oldChild.id) {
+        morphed = walk(newChild, oldChild)
+        if (morphed !== oldChild) {
+          oldNode.replaceChild(morphed, oldChild)
+          offset++
+        }
+
+      // Insert the node at the index if we couldn't morph or find a matching node
+      } else {
+        oldNode.insertBefore(newChild, oldChild)
+        offset++
+      }
+    }
+  }
+}
+
+function same (a, b) {
+  if (a.id) return a.id === b.id
+  if (a.isSameNode) return a.isSameNode(b)
+  if (a.tagName !== b.tagName) return false
+  if (a.type === TEXT_NODE) return a.nodeValue === b.nodeValue
+  return false
+}
+
+},{"./lib/morph":70,"assert":11}],69:[function(require,module,exports){
+module.exports = [
+  // attribute events (can be set with attributes)
+  'onclick',
+  'ondblclick',
+  'onmousedown',
+  'onmouseup',
+  'onmouseover',
+  'onmousemove',
+  'onmouseout',
+  'onmouseenter',
+  'onmouseleave',
+  'ondragstart',
+  'ondrag',
+  'ondragenter',
+  'ondragleave',
+  'ondragover',
+  'ondrop',
+  'ondragend',
+  'onkeydown',
+  'onkeypress',
+  'onkeyup',
+  'onunload',
+  'onabort',
+  'onerror',
+  'onresize',
+  'onscroll',
+  'onselect',
+  'onchange',
+  'onsubmit',
+  'onreset',
+  'onfocus',
+  'onblur',
+  'oninput',
+  // other common events
+  'oncontextmenu',
+  'onfocusin',
+  'onfocusout'
+]
+
+},{}],70:[function(require,module,exports){
+var events = require('./events')
+var eventsLength = events.length
+
+var ELEMENT_NODE = 1
+var TEXT_NODE = 3
+var COMMENT_NODE = 8
+
+module.exports = morph
+
+// diff elements and apply the resulting patch to the old node
+// (obj, obj) -> null
+function morph (newNode, oldNode) {
+  var nodeType = newNode.nodeType
+  var nodeName = newNode.nodeName
+
+  if (nodeType === ELEMENT_NODE) {
+    copyAttrs(newNode, oldNode)
+  }
+
+  if (nodeType === TEXT_NODE || nodeType === COMMENT_NODE) {
+    oldNode.nodeValue = newNode.nodeValue
+  }
+
+  // Some DOM nodes are weird
+  // https://github.com/patrick-steele-idem/morphdom/blob/master/src/specialElHandlers.js
+  if (nodeName === 'INPUT') updateInput(newNode, oldNode)
+  else if (nodeName === 'OPTION') updateOption(newNode, oldNode)
+  else if (nodeName === 'TEXTAREA') updateTextarea(newNode, oldNode)
+
+  copyEvents(newNode, oldNode)
+}
+
+function copyAttrs (newNode, oldNode) {
+  var oldAttrs = oldNode.attributes
+  var newAttrs = newNode.attributes
+  var attrNamespaceURI = null
+  var attrValue = null
+  var fromValue = null
+  var attrName = null
+  var attr = null
+
+  for (var i = newAttrs.length - 1; i >= 0; --i) {
+    attr = newAttrs[i]
+    attrName = attr.name
+    attrNamespaceURI = attr.namespaceURI
+    attrValue = attr.value
+    if (attrNamespaceURI) {
+      attrName = attr.localName || attrName
+      fromValue = oldNode.getAttributeNS(attrNamespaceURI, attrName)
+      if (fromValue !== attrValue) {
+        oldNode.setAttributeNS(attrNamespaceURI, attrName, attrValue)
+      }
+    } else {
+      if (!oldNode.hasAttribute(attrName)) {
+        oldNode.setAttribute(attrName, attrValue)
+      } else {
+        fromValue = oldNode.getAttribute(attrName)
+        if (fromValue !== attrValue) {
+          // apparently values are always cast to strings, ah well
+          if (attrValue === 'null' || attrValue === 'undefined') {
+            oldNode.removeAttribute(attrName)
+          } else {
+            oldNode.setAttribute(attrName, attrValue)
+          }
+        }
+      }
+    }
+  }
+
+  // Remove any extra attributes found on the original DOM element that
+  // weren't found on the target element.
+  for (var j = oldAttrs.length - 1; j >= 0; --j) {
+    attr = oldAttrs[j]
+    if (attr.specified !== false) {
+      attrName = attr.name
+      attrNamespaceURI = attr.namespaceURI
+
+      if (attrNamespaceURI) {
+        attrName = attr.localName || attrName
+        if (!newNode.hasAttributeNS(attrNamespaceURI, attrName)) {
+          oldNode.removeAttributeNS(attrNamespaceURI, attrName)
+        }
+      } else {
+        if (!newNode.hasAttributeNS(null, attrName)) {
+          oldNode.removeAttribute(attrName)
+        }
+      }
+    }
+  }
+}
+
+function copyEvents (newNode, oldNode) {
+  for (var i = 0; i < eventsLength; i++) {
+    var ev = events[i]
+    if (newNode[ev]) {           // if new element has a whitelisted attribute
+      oldNode[ev] = newNode[ev]  // update existing element
+    } else if (oldNode[ev]) {    // if existing element has it and new one doesnt
+      oldNode[ev] = undefined    // remove it from existing element
+    }
+  }
+}
+
+function updateOption (newNode, oldNode) {
+  updateAttribute(newNode, oldNode, 'selected')
+}
+
+// The "value" attribute is special for the <input> element since it sets the
+// initial value. Changing the "value" attribute without changing the "value"
+// property will have no effect since it is only used to the set the initial
+// value. Similar for the "checked" attribute, and "disabled".
+function updateInput (newNode, oldNode) {
+  var newValue = newNode.value
+  var oldValue = oldNode.value
+
+  updateAttribute(newNode, oldNode, 'checked')
+  updateAttribute(newNode, oldNode, 'disabled')
+
+  if (newValue !== oldValue) {
+    oldNode.setAttribute('value', newValue)
+    oldNode.value = newValue
+  }
+
+  if (newValue === 'null') {
+    oldNode.value = ''
+    oldNode.removeAttribute('value')
+  }
+
+  if (!newNode.hasAttributeNS(null, 'value')) {
+    oldNode.removeAttribute('value')
+  } else if (oldNode.type === 'range') {
+    // this is so elements like slider move their UI thingy
+    oldNode.value = newValue
+  }
+}
+
+function updateTextarea (newNode, oldNode) {
+  var newValue = newNode.value
+  if (newValue !== oldNode.value) {
+    oldNode.value = newValue
+  }
+
+  if (oldNode.firstChild && oldNode.firstChild.nodeValue !== newValue) {
+    // Needed for IE. Apparently IE sets the placeholder as the
+    // node value and vise versa. This ignores an empty update.
+    if (newValue === '' && oldNode.firstChild.nodeValue === oldNode.placeholder) {
+      return
+    }
+
+    oldNode.firstChild.nodeValue = newValue
+  }
+}
+
+function updateAttribute (newNode, oldNode, name) {
+  if (newNode[name] !== oldNode[name]) {
+    oldNode[name] = newNode[name]
+    if (newNode[name]) {
+      oldNode.setAttribute(name, '')
+    } else {
+      oldNode.removeAttribute(name)
+    }
+  }
+}
+
+},{"./events":69}],71:[function(require,module,exports){
+var onIdle = require('on-idle')
+var assert = require('assert')
+
+var perf
+var disabled = true
+try {
+  perf = window.performance
+  disabled = window.localStorage.DISABLE_NANOTIMING === 'true' || !perf.mark
+} catch (e) { }
+
+module.exports = nanotiming
+
+function nanotiming (name) {
+  assert.equal(typeof name, 'string', 'nanotiming: name should be type string')
+
+  if (disabled) return noop
+
+  var uuid = (perf.now() * 100).toFixed()
+  var startName = 'start-' + uuid + '-' + name
+  perf.mark(startName)
+
+  function end (cb) {
+    var endName = 'end-' + uuid + '-' + name
+    perf.mark(endName)
+
+    onIdle(function () {
+      var measureName = name + ' [' + uuid + ']'
+      perf.measure(measureName, startName, endName)
+      perf.clearMarks(startName)
+      perf.clearMarks(endName)
+      if (cb) cb(name)
+    })
+  }
+
+  end.uuid = uuid
+  return end
+}
+
+function noop (cb) {
+  if (cb) onIdle(cb)
+}
+
+},{"assert":11,"on-idle":82}],72:[function(require,module,exports){
 var assert = require('assert')
 
 module.exports = history
@@ -9516,7 +10176,7 @@ function history (cb) {
   }
 }
 
-},{"assert":11}],68:[function(require,module,exports){
+},{"assert":11}],73:[function(require,module,exports){
 var assert = require('assert')
 
 module.exports = href
@@ -9552,7 +10212,7 @@ function href (cb, root) {
   }
 }
 
-},{"assert":11}],69:[function(require,module,exports){
+},{"assert":11}],74:[function(require,module,exports){
 var assert = require('assert')
 var xtend = require('xtend')
 
@@ -9716,7 +10376,7 @@ function pad (str) {
   return str.length !== 2 ? 0 + str : str
 }
 
-},{"assert":11,"xtend":137}],70:[function(require,module,exports){
+},{"assert":11,"xtend":142}],75:[function(require,module,exports){
 var assert = require('assert')
 var morph = require('./lib/morph')
 var rootLabelRegex = /^data-onloadid/
@@ -9811,47 +10471,9 @@ function persistStatefulRoot (newNode, oldNode) {
   }
 }
 
-},{"./lib/morph":72,"assert":11}],71:[function(require,module,exports){
-module.exports = [
-  // attribute events (can be set with attributes)
-  'onclick',
-  'ondblclick',
-  'onmousedown',
-  'onmouseup',
-  'onmouseover',
-  'onmousemove',
-  'onmouseout',
-  'onmouseenter',
-  'onmouseleave',
-  'ondragstart',
-  'ondrag',
-  'ondragenter',
-  'ondragleave',
-  'ondragover',
-  'ondrop',
-  'ondragend',
-  'onkeydown',
-  'onkeypress',
-  'onkeyup',
-  'onunload',
-  'onabort',
-  'onerror',
-  'onresize',
-  'onscroll',
-  'onselect',
-  'onchange',
-  'onsubmit',
-  'onreset',
-  'onfocus',
-  'onblur',
-  'oninput',
-  // other common events
-  'oncontextmenu',
-  'onfocusin',
-  'onfocusout'
-]
-
-},{}],72:[function(require,module,exports){
+},{"./lib/morph":77,"assert":11}],76:[function(require,module,exports){
+arguments[4][69][0].apply(exports,arguments)
+},{"dup":69}],77:[function(require,module,exports){
 var events = require('./events')
 var eventsLength = events.length
 
@@ -10026,7 +10648,7 @@ function updateAttribute (newNode, oldNode, name) {
   }
 }
 
-},{"./events":71}],73:[function(require,module,exports){
+},{"./events":76}],78:[function(require,module,exports){
 var nanomorph = require('nanomorph')
 var assert = require('assert')
 
@@ -10048,7 +10670,7 @@ function nanomount (target, newTree) {
     target.outerHTML.nodeName + '.')
 }
 
-},{"assert":11,"nanomorph":70}],74:[function(require,module,exports){
+},{"assert":11,"nanomorph":75}],79:[function(require,module,exports){
 'use strict'
 
 var assert = require('assert')
@@ -10085,7 +10707,7 @@ function nanoraf (render, raf) {
   }
 }
 
-},{"assert":11}],75:[function(require,module,exports){
+},{"assert":11}],80:[function(require,module,exports){
 var wayfarer = require('wayfarer')
 
 var isLocalFile = (/file:\/\//.test(typeof window === 'object' &&
@@ -10145,7 +10767,7 @@ function pathname (route, isElectron) {
   return route.replace(suffix, '').replace(normalize, '/')
 }
 
-},{"wayfarer":126}],76:[function(require,module,exports){
+},{"wayfarer":131}],81:[function(require,module,exports){
 var assert = require('assert')
 
 module.exports = Nanotiming
@@ -10171,7 +10793,7 @@ Nanotiming.prototype.end = function (partial) {
   window.performance.measure(name, name + '-start', name + '-end')
 }
 
-},{"assert":11}],77:[function(require,module,exports){
+},{"assert":11}],82:[function(require,module,exports){
 var assert = require('assert')
 
 var dftOpts = {}
@@ -10202,7 +10824,7 @@ function onIdle (cb, opts) {
   }
 }
 
-},{"assert":11}],78:[function(require,module,exports){
+},{"assert":11}],83:[function(require,module,exports){
 /* global MutationObserver */
 var document = require('global/document')
 var window = require('global/window')
@@ -10291,7 +10913,7 @@ function eachMutation (nodes, fn) {
   }
 }
 
-},{"global/document":50,"global/window":51}],79:[function(require,module,exports){
+},{"global/document":50,"global/window":51}],84:[function(require,module,exports){
 (function (global){
 /**
  * JSON parse.
@@ -10326,7 +10948,7 @@ module.exports = function parsejson(data) {
   }
 };
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],80:[function(require,module,exports){
+},{}],85:[function(require,module,exports){
 /**
  * Compiles a querystring
  * Returns string representation of the object
@@ -10365,7 +10987,7 @@ exports.decode = function(qs){
   return qry;
 };
 
-},{}],81:[function(require,module,exports){
+},{}],86:[function(require,module,exports){
 /**
  * Parses an URI
  *
@@ -10406,7 +11028,7 @@ module.exports = function parseuri(str) {
     return uri;
 };
 
-},{}],82:[function(require,module,exports){
+},{}],87:[function(require,module,exports){
 module.exports = plucker
 
 function plucker(path, object) {
@@ -10443,7 +11065,7 @@ function pluck(path) {
   }
 }
 
-},{}],83:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -10490,193 +11112,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":84}],84:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
-},{}],85:[function(require,module,exports){
+},{"_process":18}],89:[function(require,module,exports){
 (function (process,global){
 'use strict'
 
@@ -10718,7 +11154,7 @@ function randomBytes (size, cb) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"_process":84,"safe-buffer":97}],86:[function(require,module,exports){
+},{"_process":18,"safe-buffer":102}],90:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -10843,7 +11279,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":88,"./_stream_writable":90,"core-util-is":27,"inherits":59,"process-nextick-args":83}],87:[function(require,module,exports){
+},{"./_stream_readable":92,"./_stream_writable":94,"core-util-is":28,"inherits":98,"process-nextick-args":88}],91:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -10891,7 +11327,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":89,"core-util-is":27,"inherits":59}],88:[function(require,module,exports){
+},{"./_stream_transform":93,"core-util-is":28,"inherits":98}],92:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -11901,7 +12337,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":86,"./internal/streams/BufferList":91,"./internal/streams/destroy":92,"./internal/streams/stream":93,"_process":84,"core-util-is":27,"events":46,"inherits":59,"isarray":62,"process-nextick-args":83,"safe-buffer":97,"string_decoder/":94,"util":17}],89:[function(require,module,exports){
+},{"./_stream_duplex":90,"./internal/streams/BufferList":95,"./internal/streams/destroy":96,"./internal/streams/stream":97,"_process":18,"core-util-is":28,"events":46,"inherits":98,"isarray":99,"process-nextick-args":88,"safe-buffer":102,"string_decoder/":126,"util":17}],93:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -12116,7 +12552,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":86,"core-util-is":27,"inherits":59}],90:[function(require,module,exports){
+},{"./_stream_duplex":90,"core-util-is":28,"inherits":98}],94:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -12783,7 +13219,7 @@ Writable.prototype._destroy = function (err, cb) {
   cb(err);
 };
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./_stream_duplex":86,"./internal/streams/destroy":92,"./internal/streams/stream":93,"_process":84,"core-util-is":27,"inherits":59,"process-nextick-args":83,"safe-buffer":97,"util-deprecate":122}],91:[function(require,module,exports){
+},{"./_stream_duplex":90,"./internal/streams/destroy":96,"./internal/streams/stream":97,"_process":18,"core-util-is":28,"inherits":98,"process-nextick-args":88,"safe-buffer":102,"util-deprecate":128}],95:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -12858,7 +13294,7 @@ module.exports = function () {
 
   return BufferList;
 }();
-},{"safe-buffer":97}],92:[function(require,module,exports){
+},{"safe-buffer":102}],96:[function(require,module,exports){
 'use strict';
 
 /*<replacement>*/
@@ -12931,283 +13367,14 @@ module.exports = {
   destroy: destroy,
   undestroy: undestroy
 };
-},{"process-nextick-args":83}],93:[function(require,module,exports){
+},{"process-nextick-args":88}],97:[function(require,module,exports){
 module.exports = require('events').EventEmitter;
 
-},{"events":46}],94:[function(require,module,exports){
-'use strict';
-
-var Buffer = require('safe-buffer').Buffer;
-
-var isEncoding = Buffer.isEncoding || function (encoding) {
-  encoding = '' + encoding;
-  switch (encoding && encoding.toLowerCase()) {
-    case 'hex':case 'utf8':case 'utf-8':case 'ascii':case 'binary':case 'base64':case 'ucs2':case 'ucs-2':case 'utf16le':case 'utf-16le':case 'raw':
-      return true;
-    default:
-      return false;
-  }
-};
-
-function _normalizeEncoding(enc) {
-  if (!enc) return 'utf8';
-  var retried;
-  while (true) {
-    switch (enc) {
-      case 'utf8':
-      case 'utf-8':
-        return 'utf8';
-      case 'ucs2':
-      case 'ucs-2':
-      case 'utf16le':
-      case 'utf-16le':
-        return 'utf16le';
-      case 'latin1':
-      case 'binary':
-        return 'latin1';
-      case 'base64':
-      case 'ascii':
-      case 'hex':
-        return enc;
-      default:
-        if (retried) return; // undefined
-        enc = ('' + enc).toLowerCase();
-        retried = true;
-    }
-  }
-};
-
-// Do not cache `Buffer.isEncoding` when checking encoding names as some
-// modules monkey-patch it to support additional encodings
-function normalizeEncoding(enc) {
-  var nenc = _normalizeEncoding(enc);
-  if (typeof nenc !== 'string' && (Buffer.isEncoding === isEncoding || !isEncoding(enc))) throw new Error('Unknown encoding: ' + enc);
-  return nenc || enc;
-}
-
-// StringDecoder provides an interface for efficiently splitting a series of
-// buffers into a series of JS strings without breaking apart multi-byte
-// characters.
-exports.StringDecoder = StringDecoder;
-function StringDecoder(encoding) {
-  this.encoding = normalizeEncoding(encoding);
-  var nb;
-  switch (this.encoding) {
-    case 'utf16le':
-      this.text = utf16Text;
-      this.end = utf16End;
-      nb = 4;
-      break;
-    case 'utf8':
-      this.fillLast = utf8FillLast;
-      nb = 4;
-      break;
-    case 'base64':
-      this.text = base64Text;
-      this.end = base64End;
-      nb = 3;
-      break;
-    default:
-      this.write = simpleWrite;
-      this.end = simpleEnd;
-      return;
-  }
-  this.lastNeed = 0;
-  this.lastTotal = 0;
-  this.lastChar = Buffer.allocUnsafe(nb);
-}
-
-StringDecoder.prototype.write = function (buf) {
-  if (buf.length === 0) return '';
-  var r;
-  var i;
-  if (this.lastNeed) {
-    r = this.fillLast(buf);
-    if (r === undefined) return '';
-    i = this.lastNeed;
-    this.lastNeed = 0;
-  } else {
-    i = 0;
-  }
-  if (i < buf.length) return r ? r + this.text(buf, i) : this.text(buf, i);
-  return r || '';
-};
-
-StringDecoder.prototype.end = utf8End;
-
-// Returns only complete characters in a Buffer
-StringDecoder.prototype.text = utf8Text;
-
-// Attempts to complete a partial non-UTF-8 character using bytes from a Buffer
-StringDecoder.prototype.fillLast = function (buf) {
-  if (this.lastNeed <= buf.length) {
-    buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, this.lastNeed);
-    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
-  }
-  buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, buf.length);
-  this.lastNeed -= buf.length;
-};
-
-// Checks the type of a UTF-8 byte, whether it's ASCII, a leading byte, or a
-// continuation byte.
-function utf8CheckByte(byte) {
-  if (byte <= 0x7F) return 0;else if (byte >> 5 === 0x06) return 2;else if (byte >> 4 === 0x0E) return 3;else if (byte >> 3 === 0x1E) return 4;
-  return -1;
-}
-
-// Checks at most 3 bytes at the end of a Buffer in order to detect an
-// incomplete multi-byte UTF-8 character. The total number of bytes (2, 3, or 4)
-// needed to complete the UTF-8 character (if applicable) are returned.
-function utf8CheckIncomplete(self, buf, i) {
-  var j = buf.length - 1;
-  if (j < i) return 0;
-  var nb = utf8CheckByte(buf[j]);
-  if (nb >= 0) {
-    if (nb > 0) self.lastNeed = nb - 1;
-    return nb;
-  }
-  if (--j < i) return 0;
-  nb = utf8CheckByte(buf[j]);
-  if (nb >= 0) {
-    if (nb > 0) self.lastNeed = nb - 2;
-    return nb;
-  }
-  if (--j < i) return 0;
-  nb = utf8CheckByte(buf[j]);
-  if (nb >= 0) {
-    if (nb > 0) {
-      if (nb === 2) nb = 0;else self.lastNeed = nb - 3;
-    }
-    return nb;
-  }
-  return 0;
-}
-
-// Validates as many continuation bytes for a multi-byte UTF-8 character as
-// needed or are available. If we see a non-continuation byte where we expect
-// one, we "replace" the validated continuation bytes we've seen so far with
-// UTF-8 replacement characters ('\ufffd'), to match v8's UTF-8 decoding
-// behavior. The continuation byte check is included three times in the case
-// where all of the continuation bytes for a character exist in the same buffer.
-// It is also done this way as a slight performance increase instead of using a
-// loop.
-function utf8CheckExtraBytes(self, buf, p) {
-  if ((buf[0] & 0xC0) !== 0x80) {
-    self.lastNeed = 0;
-    return '\ufffd'.repeat(p);
-  }
-  if (self.lastNeed > 1 && buf.length > 1) {
-    if ((buf[1] & 0xC0) !== 0x80) {
-      self.lastNeed = 1;
-      return '\ufffd'.repeat(p + 1);
-    }
-    if (self.lastNeed > 2 && buf.length > 2) {
-      if ((buf[2] & 0xC0) !== 0x80) {
-        self.lastNeed = 2;
-        return '\ufffd'.repeat(p + 2);
-      }
-    }
-  }
-}
-
-// Attempts to complete a multi-byte UTF-8 character using bytes from a Buffer.
-function utf8FillLast(buf) {
-  var p = this.lastTotal - this.lastNeed;
-  var r = utf8CheckExtraBytes(this, buf, p);
-  if (r !== undefined) return r;
-  if (this.lastNeed <= buf.length) {
-    buf.copy(this.lastChar, p, 0, this.lastNeed);
-    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
-  }
-  buf.copy(this.lastChar, p, 0, buf.length);
-  this.lastNeed -= buf.length;
-}
-
-// Returns all complete UTF-8 characters in a Buffer. If the Buffer ended on a
-// partial character, the character's bytes are buffered until the required
-// number of bytes are available.
-function utf8Text(buf, i) {
-  var total = utf8CheckIncomplete(this, buf, i);
-  if (!this.lastNeed) return buf.toString('utf8', i);
-  this.lastTotal = total;
-  var end = buf.length - (total - this.lastNeed);
-  buf.copy(this.lastChar, 0, end);
-  return buf.toString('utf8', i, end);
-}
-
-// For UTF-8, a replacement character for each buffered byte of a (partial)
-// character needs to be added to the output.
-function utf8End(buf) {
-  var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) return r + '\ufffd'.repeat(this.lastTotal - this.lastNeed);
-  return r;
-}
-
-// UTF-16LE typically needs two bytes per character, but even if we have an even
-// number of bytes available, we need to check if we end on a leading/high
-// surrogate. In that case, we need to wait for the next two bytes in order to
-// decode the last character properly.
-function utf16Text(buf, i) {
-  if ((buf.length - i) % 2 === 0) {
-    var r = buf.toString('utf16le', i);
-    if (r) {
-      var c = r.charCodeAt(r.length - 1);
-      if (c >= 0xD800 && c <= 0xDBFF) {
-        this.lastNeed = 2;
-        this.lastTotal = 4;
-        this.lastChar[0] = buf[buf.length - 2];
-        this.lastChar[1] = buf[buf.length - 1];
-        return r.slice(0, -1);
-      }
-    }
-    return r;
-  }
-  this.lastNeed = 1;
-  this.lastTotal = 2;
-  this.lastChar[0] = buf[buf.length - 1];
-  return buf.toString('utf16le', i, buf.length - 1);
-}
-
-// For UTF-16LE we do not explicitly append special replacement characters if we
-// end on a partial character, we simply let v8 handle that.
-function utf16End(buf) {
-  var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) {
-    var end = this.lastTotal - this.lastNeed;
-    return r + this.lastChar.toString('utf16le', 0, end);
-  }
-  return r;
-}
-
-function base64Text(buf, i) {
-  var n = (buf.length - i) % 3;
-  if (n === 0) return buf.toString('base64', i);
-  this.lastNeed = 3 - n;
-  this.lastTotal = 3;
-  if (n === 1) {
-    this.lastChar[0] = buf[buf.length - 1];
-  } else {
-    this.lastChar[0] = buf[buf.length - 2];
-    this.lastChar[1] = buf[buf.length - 1];
-  }
-  return buf.toString('base64', i, buf.length - n);
-}
-
-function base64End(buf) {
-  var r = buf && buf.length ? this.write(buf) : '';
-  if (this.lastNeed) return r + this.lastChar.toString('base64', 0, 3 - this.lastNeed);
-  return r;
-}
-
-// Pass bytes on through for single-byte encodings (e.g. ascii, latin1, hex)
-function simpleWrite(buf) {
-  return buf.toString(this.encoding);
-}
-
-function simpleEnd(buf) {
-  return buf && buf.length ? this.write(buf) : '';
-}
-},{"safe-buffer":97}],95:[function(require,module,exports){
+},{"events":46}],98:[function(require,module,exports){
+arguments[4][59][0].apply(exports,arguments)
+},{"dup":59}],99:[function(require,module,exports){
+arguments[4][53][0].apply(exports,arguments)
+},{"dup":53}],100:[function(require,module,exports){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = exports;
 exports.Readable = exports;
@@ -13216,7 +13383,7 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":86,"./lib/_stream_passthrough.js":87,"./lib/_stream_readable.js":88,"./lib/_stream_transform.js":89,"./lib/_stream_writable.js":90}],96:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":90,"./lib/_stream_passthrough.js":91,"./lib/_stream_readable.js":92,"./lib/_stream_transform.js":93,"./lib/_stream_writable.js":94}],101:[function(require,module,exports){
 'use strict'
 
 /**
@@ -13246,7 +13413,7 @@ module.exports = function removeItems(arr, startIdx, removeCount)
   arr.length = len
 }
 
-},{}],97:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 /* eslint-disable node/no-deprecated-api */
 var buffer = require('buffer')
 var Buffer = buffer.Buffer
@@ -13310,7 +13477,7 @@ SafeBuffer.allocUnsafeSlow = function (size) {
   return buffer.SlowBuffer(size)
 }
 
-},{"buffer":18}],98:[function(require,module,exports){
+},{"buffer":19}],103:[function(require,module,exports){
  /* eslint-env node */
 'use strict';
 
@@ -13918,14 +14085,14 @@ SDPUtils.isRejected = function(mediaSection) {
 // Expose public methods.
 module.exports = SDPUtils;
 
-},{}],99:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 module.exports = require('insert-css')
 
-},{"insert-css":60}],100:[function(require,module,exports){
+},{"insert-css":60}],105:[function(require,module,exports){
 'use strict';
 module.exports = require('./lib/index');
 
-},{"./lib/index":105}],101:[function(require,module,exports){
+},{"./lib/index":110}],106:[function(require,module,exports){
 'use strict';
 
 var randomFromSeed = require('./random/random-from-seed');
@@ -14025,7 +14192,7 @@ module.exports = {
     shuffled: getShuffled
 };
 
-},{"./random/random-from-seed":108}],102:[function(require,module,exports){
+},{"./random/random-from-seed":113}],107:[function(require,module,exports){
 'use strict';
 
 var encode = require('./encode');
@@ -14075,7 +14242,7 @@ function build(clusterWorkerId) {
 
 module.exports = build;
 
-},{"./alphabet":101,"./encode":104}],103:[function(require,module,exports){
+},{"./alphabet":106,"./encode":109}],108:[function(require,module,exports){
 'use strict';
 var alphabet = require('./alphabet');
 
@@ -14094,7 +14261,7 @@ function decode(id) {
 
 module.exports = decode;
 
-},{"./alphabet":101}],104:[function(require,module,exports){
+},{"./alphabet":106}],109:[function(require,module,exports){
 'use strict';
 
 var randomByte = require('./random/random-byte');
@@ -14115,7 +14282,7 @@ function encode(lookup, number) {
 
 module.exports = encode;
 
-},{"./random/random-byte":107}],105:[function(require,module,exports){
+},{"./random/random-byte":112}],110:[function(require,module,exports){
 'use strict';
 
 var alphabet = require('./alphabet');
@@ -14182,7 +14349,7 @@ module.exports.characters = characters;
 module.exports.decode = decode;
 module.exports.isValid = isValid;
 
-},{"./alphabet":101,"./build":102,"./decode":103,"./encode":104,"./is-valid":106,"./util/cluster-worker-id":109}],106:[function(require,module,exports){
+},{"./alphabet":106,"./build":107,"./decode":108,"./encode":109,"./is-valid":111,"./util/cluster-worker-id":114}],111:[function(require,module,exports){
 'use strict';
 var alphabet = require('./alphabet');
 
@@ -14203,7 +14370,7 @@ function isShortId(id) {
 
 module.exports = isShortId;
 
-},{"./alphabet":101}],107:[function(require,module,exports){
+},{"./alphabet":106}],112:[function(require,module,exports){
 'use strict';
 
 var crypto = typeof window === 'object' && (window.crypto || window.msCrypto); // IE 11 uses window.msCrypto
@@ -14219,7 +14386,7 @@ function randomByte() {
 
 module.exports = randomByte;
 
-},{}],108:[function(require,module,exports){
+},{}],113:[function(require,module,exports){
 'use strict';
 
 // Found this seed-based random generator somewhere
@@ -14246,12 +14413,12 @@ module.exports = {
     seed: setSeed
 };
 
-},{}],109:[function(require,module,exports){
+},{}],114:[function(require,module,exports){
 'use strict';
 
 module.exports = 0;
 
-},{}],110:[function(require,module,exports){
+},{}],115:[function(require,module,exports){
 (function (Buffer){
 module.exports = Peer
 
@@ -15057,7 +15224,7 @@ Peer.prototype._transformConstraints = function (constraints) {
 function noop () {}
 
 }).call(this,require("buffer").Buffer)
-},{"buffer":18,"debug":29,"get-browser-rtc":48,"inherits":59,"randombytes":85,"readable-stream":95}],111:[function(require,module,exports){
+},{"buffer":19,"debug":29,"get-browser-rtc":48,"inherits":59,"randombytes":89,"readable-stream":100}],116:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -15153,7 +15320,7 @@ exports.connect = lookup;
 exports.Manager = require('./manager');
 exports.Socket = require('./socket');
 
-},{"./manager":112,"./socket":114,"./url":115,"debug":29,"socket.io-parser":117}],112:[function(require,module,exports){
+},{"./manager":117,"./socket":119,"./url":120,"debug":29,"socket.io-parser":122}],117:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -15728,7 +15895,7 @@ Manager.prototype.onreconnect = function () {
   this.emitAll('reconnect', attempt);
 };
 
-},{"./on":113,"./socket":114,"backo2":12,"component-bind":23,"component-emitter":24,"debug":29,"engine.io-client":32,"indexof":58,"socket.io-parser":117}],113:[function(require,module,exports){
+},{"./on":118,"./socket":119,"backo2":12,"component-bind":24,"component-emitter":25,"debug":29,"engine.io-client":32,"indexof":58,"socket.io-parser":122}],118:[function(require,module,exports){
 
 /**
  * Module exports.
@@ -15754,7 +15921,7 @@ function on (obj, ev, fn) {
   };
 }
 
-},{}],114:[function(require,module,exports){
+},{}],119:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -16174,7 +16341,7 @@ Socket.prototype.compress = function (compress) {
   return this;
 };
 
-},{"./on":113,"component-bind":23,"component-emitter":24,"debug":29,"parseqs":80,"socket.io-parser":117,"to-array":121}],115:[function(require,module,exports){
+},{"./on":118,"component-bind":24,"component-emitter":25,"debug":29,"parseqs":85,"socket.io-parser":122,"to-array":127}],120:[function(require,module,exports){
 (function (global){
 
 /**
@@ -16253,7 +16420,7 @@ function url (uri, loc) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"debug":29,"parseuri":81}],116:[function(require,module,exports){
+},{"debug":29,"parseuri":86}],121:[function(require,module,exports){
 (function (global){
 /*global Blob,File*/
 
@@ -16398,7 +16565,7 @@ exports.removeBlobs = function(data, callback) {
 };
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./is-buffer":118,"isarray":119}],117:[function(require,module,exports){
+},{"./is-buffer":123,"isarray":124}],122:[function(require,module,exports){
 
 /**
  * Module dependencies.
@@ -16800,7 +16967,7 @@ function error() {
   };
 }
 
-},{"./binary":116,"./is-buffer":118,"component-emitter":24,"debug":29,"has-binary2":52}],118:[function(require,module,exports){
+},{"./binary":121,"./is-buffer":123,"component-emitter":25,"debug":29,"has-binary2":52}],123:[function(require,module,exports){
 (function (global){
 
 module.exports = isBuf;
@@ -16817,9 +16984,9 @@ function isBuf(obj) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],119:[function(require,module,exports){
+},{}],124:[function(require,module,exports){
 arguments[4][53][0].apply(exports,arguments)
-},{"dup":53}],120:[function(require,module,exports){
+},{"dup":53}],125:[function(require,module,exports){
 var fastSafeStringify = require('fast-safe-stringify')
 var copy = require('copy-text-to-clipboard')
 
@@ -16837,7 +17004,280 @@ function stateCopy (obj) {
 module.exports = stateCopy
 
 
-},{"copy-text-to-clipboard":26,"fast-safe-stringify":47}],121:[function(require,module,exports){
+},{"copy-text-to-clipboard":27,"fast-safe-stringify":47}],126:[function(require,module,exports){
+'use strict';
+
+var Buffer = require('safe-buffer').Buffer;
+
+var isEncoding = Buffer.isEncoding || function (encoding) {
+  encoding = '' + encoding;
+  switch (encoding && encoding.toLowerCase()) {
+    case 'hex':case 'utf8':case 'utf-8':case 'ascii':case 'binary':case 'base64':case 'ucs2':case 'ucs-2':case 'utf16le':case 'utf-16le':case 'raw':
+      return true;
+    default:
+      return false;
+  }
+};
+
+function _normalizeEncoding(enc) {
+  if (!enc) return 'utf8';
+  var retried;
+  while (true) {
+    switch (enc) {
+      case 'utf8':
+      case 'utf-8':
+        return 'utf8';
+      case 'ucs2':
+      case 'ucs-2':
+      case 'utf16le':
+      case 'utf-16le':
+        return 'utf16le';
+      case 'latin1':
+      case 'binary':
+        return 'latin1';
+      case 'base64':
+      case 'ascii':
+      case 'hex':
+        return enc;
+      default:
+        if (retried) return; // undefined
+        enc = ('' + enc).toLowerCase();
+        retried = true;
+    }
+  }
+};
+
+// Do not cache `Buffer.isEncoding` when checking encoding names as some
+// modules monkey-patch it to support additional encodings
+function normalizeEncoding(enc) {
+  var nenc = _normalizeEncoding(enc);
+  if (typeof nenc !== 'string' && (Buffer.isEncoding === isEncoding || !isEncoding(enc))) throw new Error('Unknown encoding: ' + enc);
+  return nenc || enc;
+}
+
+// StringDecoder provides an interface for efficiently splitting a series of
+// buffers into a series of JS strings without breaking apart multi-byte
+// characters.
+exports.StringDecoder = StringDecoder;
+function StringDecoder(encoding) {
+  this.encoding = normalizeEncoding(encoding);
+  var nb;
+  switch (this.encoding) {
+    case 'utf16le':
+      this.text = utf16Text;
+      this.end = utf16End;
+      nb = 4;
+      break;
+    case 'utf8':
+      this.fillLast = utf8FillLast;
+      nb = 4;
+      break;
+    case 'base64':
+      this.text = base64Text;
+      this.end = base64End;
+      nb = 3;
+      break;
+    default:
+      this.write = simpleWrite;
+      this.end = simpleEnd;
+      return;
+  }
+  this.lastNeed = 0;
+  this.lastTotal = 0;
+  this.lastChar = Buffer.allocUnsafe(nb);
+}
+
+StringDecoder.prototype.write = function (buf) {
+  if (buf.length === 0) return '';
+  var r;
+  var i;
+  if (this.lastNeed) {
+    r = this.fillLast(buf);
+    if (r === undefined) return '';
+    i = this.lastNeed;
+    this.lastNeed = 0;
+  } else {
+    i = 0;
+  }
+  if (i < buf.length) return r ? r + this.text(buf, i) : this.text(buf, i);
+  return r || '';
+};
+
+StringDecoder.prototype.end = utf8End;
+
+// Returns only complete characters in a Buffer
+StringDecoder.prototype.text = utf8Text;
+
+// Attempts to complete a partial non-UTF-8 character using bytes from a Buffer
+StringDecoder.prototype.fillLast = function (buf) {
+  if (this.lastNeed <= buf.length) {
+    buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, this.lastNeed);
+    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
+  }
+  buf.copy(this.lastChar, this.lastTotal - this.lastNeed, 0, buf.length);
+  this.lastNeed -= buf.length;
+};
+
+// Checks the type of a UTF-8 byte, whether it's ASCII, a leading byte, or a
+// continuation byte.
+function utf8CheckByte(byte) {
+  if (byte <= 0x7F) return 0;else if (byte >> 5 === 0x06) return 2;else if (byte >> 4 === 0x0E) return 3;else if (byte >> 3 === 0x1E) return 4;
+  return -1;
+}
+
+// Checks at most 3 bytes at the end of a Buffer in order to detect an
+// incomplete multi-byte UTF-8 character. The total number of bytes (2, 3, or 4)
+// needed to complete the UTF-8 character (if applicable) are returned.
+function utf8CheckIncomplete(self, buf, i) {
+  var j = buf.length - 1;
+  if (j < i) return 0;
+  var nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) self.lastNeed = nb - 1;
+    return nb;
+  }
+  if (--j < i) return 0;
+  nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) self.lastNeed = nb - 2;
+    return nb;
+  }
+  if (--j < i) return 0;
+  nb = utf8CheckByte(buf[j]);
+  if (nb >= 0) {
+    if (nb > 0) {
+      if (nb === 2) nb = 0;else self.lastNeed = nb - 3;
+    }
+    return nb;
+  }
+  return 0;
+}
+
+// Validates as many continuation bytes for a multi-byte UTF-8 character as
+// needed or are available. If we see a non-continuation byte where we expect
+// one, we "replace" the validated continuation bytes we've seen so far with
+// UTF-8 replacement characters ('\ufffd'), to match v8's UTF-8 decoding
+// behavior. The continuation byte check is included three times in the case
+// where all of the continuation bytes for a character exist in the same buffer.
+// It is also done this way as a slight performance increase instead of using a
+// loop.
+function utf8CheckExtraBytes(self, buf, p) {
+  if ((buf[0] & 0xC0) !== 0x80) {
+    self.lastNeed = 0;
+    return '\ufffd'.repeat(p);
+  }
+  if (self.lastNeed > 1 && buf.length > 1) {
+    if ((buf[1] & 0xC0) !== 0x80) {
+      self.lastNeed = 1;
+      return '\ufffd'.repeat(p + 1);
+    }
+    if (self.lastNeed > 2 && buf.length > 2) {
+      if ((buf[2] & 0xC0) !== 0x80) {
+        self.lastNeed = 2;
+        return '\ufffd'.repeat(p + 2);
+      }
+    }
+  }
+}
+
+// Attempts to complete a multi-byte UTF-8 character using bytes from a Buffer.
+function utf8FillLast(buf) {
+  var p = this.lastTotal - this.lastNeed;
+  var r = utf8CheckExtraBytes(this, buf, p);
+  if (r !== undefined) return r;
+  if (this.lastNeed <= buf.length) {
+    buf.copy(this.lastChar, p, 0, this.lastNeed);
+    return this.lastChar.toString(this.encoding, 0, this.lastTotal);
+  }
+  buf.copy(this.lastChar, p, 0, buf.length);
+  this.lastNeed -= buf.length;
+}
+
+// Returns all complete UTF-8 characters in a Buffer. If the Buffer ended on a
+// partial character, the character's bytes are buffered until the required
+// number of bytes are available.
+function utf8Text(buf, i) {
+  var total = utf8CheckIncomplete(this, buf, i);
+  if (!this.lastNeed) return buf.toString('utf8', i);
+  this.lastTotal = total;
+  var end = buf.length - (total - this.lastNeed);
+  buf.copy(this.lastChar, 0, end);
+  return buf.toString('utf8', i, end);
+}
+
+// For UTF-8, a replacement character for each buffered byte of a (partial)
+// character needs to be added to the output.
+function utf8End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) return r + '\ufffd'.repeat(this.lastTotal - this.lastNeed);
+  return r;
+}
+
+// UTF-16LE typically needs two bytes per character, but even if we have an even
+// number of bytes available, we need to check if we end on a leading/high
+// surrogate. In that case, we need to wait for the next two bytes in order to
+// decode the last character properly.
+function utf16Text(buf, i) {
+  if ((buf.length - i) % 2 === 0) {
+    var r = buf.toString('utf16le', i);
+    if (r) {
+      var c = r.charCodeAt(r.length - 1);
+      if (c >= 0xD800 && c <= 0xDBFF) {
+        this.lastNeed = 2;
+        this.lastTotal = 4;
+        this.lastChar[0] = buf[buf.length - 2];
+        this.lastChar[1] = buf[buf.length - 1];
+        return r.slice(0, -1);
+      }
+    }
+    return r;
+  }
+  this.lastNeed = 1;
+  this.lastTotal = 2;
+  this.lastChar[0] = buf[buf.length - 1];
+  return buf.toString('utf16le', i, buf.length - 1);
+}
+
+// For UTF-16LE we do not explicitly append special replacement characters if we
+// end on a partial character, we simply let v8 handle that.
+function utf16End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) {
+    var end = this.lastTotal - this.lastNeed;
+    return r + this.lastChar.toString('utf16le', 0, end);
+  }
+  return r;
+}
+
+function base64Text(buf, i) {
+  var n = (buf.length - i) % 3;
+  if (n === 0) return buf.toString('base64', i);
+  this.lastNeed = 3 - n;
+  this.lastTotal = 3;
+  if (n === 1) {
+    this.lastChar[0] = buf[buf.length - 1];
+  } else {
+    this.lastChar[0] = buf[buf.length - 2];
+    this.lastChar[1] = buf[buf.length - 1];
+  }
+  return buf.toString('base64', i, buf.length - n);
+}
+
+function base64End(buf) {
+  var r = buf && buf.length ? this.write(buf) : '';
+  if (this.lastNeed) return r + this.lastChar.toString('base64', 0, 3 - this.lastNeed);
+  return r;
+}
+
+// Pass bytes on through for single-byte encodings (e.g. ascii, latin1, hex)
+function simpleWrite(buf) {
+  return buf.toString(this.encoding);
+}
+
+function simpleEnd(buf) {
+  return buf && buf.length ? this.write(buf) : '';
+}
+},{"safe-buffer":102}],127:[function(require,module,exports){
 module.exports = toArray
 
 function toArray(list, index) {
@@ -16852,7 +17292,7 @@ function toArray(list, index) {
     return array
 }
 
-},{}],122:[function(require,module,exports){
+},{}],128:[function(require,module,exports){
 (function (global){
 
 /**
@@ -16923,16 +17363,14 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],123:[function(require,module,exports){
-arguments[4][59][0].apply(exports,arguments)
-},{"dup":59}],124:[function(require,module,exports){
+},{}],129:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],125:[function(require,module,exports){
+},{}],130:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -17522,7 +17960,7 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":124,"_process":84,"inherits":123}],126:[function(require,module,exports){
+},{"./support/isBuffer":129,"_process":18,"inherits":59}],131:[function(require,module,exports){
 var assert = require('assert')
 var trie = require('./trie')
 
@@ -17589,7 +18027,7 @@ function Wayfarer (dft) {
   }
 }
 
-},{"./trie":127,"assert":11}],127:[function(require,module,exports){
+},{"./trie":132,"assert":11}],132:[function(require,module,exports){
 var mutate = require('xtend/mutable')
 var assert = require('assert')
 var xtend = require('xtend')
@@ -17728,7 +18166,7 @@ Trie.prototype.mount = function (route, trie) {
   }
 }
 
-},{"assert":11,"xtend":137,"xtend/mutable":138}],128:[function(require,module,exports){
+},{"assert":11,"xtend":142,"xtend/mutable":143}],133:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -17822,7 +18260,7 @@ Trie.prototype.mount = function (route, trie) {
   }
 })();
 
-},{"./chrome/chrome_shim":129,"./edge/edge_shim":131,"./firefox/firefox_shim":133,"./safari/safari_shim":135,"./utils":136}],129:[function(require,module,exports){
+},{"./chrome/chrome_shim":134,"./edge/edge_shim":136,"./firefox/firefox_shim":138,"./safari/safari_shim":140,"./utils":141}],134:[function(require,module,exports){
 
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
@@ -18089,7 +18527,7 @@ module.exports = {
   shimGetUserMedia: require('./getusermedia')
 };
 
-},{"../utils.js":136,"./getusermedia":130}],130:[function(require,module,exports){
+},{"../utils.js":141,"./getusermedia":135}],135:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -18289,7 +18727,7 @@ module.exports = function() {
   }
 };
 
-},{"../utils.js":136}],131:[function(require,module,exports){
+},{"../utils.js":141}],136:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -19418,7 +19856,7 @@ module.exports = {
   shimGetUserMedia: require('./getusermedia')
 };
 
-},{"../utils":136,"./getusermedia":132,"sdp":98}],132:[function(require,module,exports){
+},{"../utils":141,"./getusermedia":137,"sdp":103}],137:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -19452,7 +19890,7 @@ module.exports = function() {
   };
 };
 
-},{}],133:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -19616,7 +20054,7 @@ module.exports = {
   shimGetUserMedia: require('./getusermedia')
 };
 
-},{"../utils":136,"./getusermedia":134}],134:[function(require,module,exports){
+},{"../utils":141,"./getusermedia":139}],139:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -19779,7 +20217,7 @@ module.exports = function() {
   };
 };
 
-},{"../utils":136}],135:[function(require,module,exports){
+},{"../utils":141}],140:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -19809,7 +20247,7 @@ module.exports = {
   // shimPeerConnection: safariShim.shimPeerConnection
 };
 
-},{}],136:[function(require,module,exports){
+},{}],141:[function(require,module,exports){
 /*
  *  Copyright (c) 2016 The WebRTC project authors. All Rights Reserved.
  *
@@ -19942,7 +20380,7 @@ module.exports = {
   extractVersion: utils.extractVersion
 };
 
-},{}],137:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -19963,7 +20401,7 @@ function extend() {
     return target
 }
 
-},{}],138:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -19982,7 +20420,7 @@ function extend(target) {
     return target
 }
 
-},{}],139:[function(require,module,exports){
+},{}],144:[function(require,module,exports){
 'use strict';
 
 var alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_'.split('')
@@ -20052,7 +20490,7 @@ yeast.encode = encode;
 yeast.decode = decode;
 module.exports = yeast;
 
-},{}],140:[function(require,module,exports){
+},{}],145:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20176,7 +20614,7 @@ function addBroadcast (devices, emit, showElement) {
 
 }
 
-},{"./components/VideoContainer.js":144,"./components/dropdown.js":145,"./components/input.js":146,"./components/modal.js":147,"./components/radioSelect.js":149,"./components/settingsUI.js":150,"choo/html":21}],141:[function(require,module,exports){
+},{"./components/VideoContainer.js":149,"./components/dropdown.js":150,"./components/input.js":151,"./components/modal.js":152,"./components/radioSelect.js":154,"./components/settingsUI.js":155,"choo/html":22}],146:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const VideoEl = require('./components/VideoContainer.js')
@@ -20222,7 +20660,7 @@ function allVideos (state, emit) {
     `
 }
 
-},{"./components/VideoContainer.js":144,"choo/html":21}],142:[function(require,module,exports){
+},{"./components/VideoContainer.js":149,"choo/html":22}],147:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const VideoEl = require('./components/VideoContainer.js')
@@ -20266,7 +20704,7 @@ function communicationView (state, emit) {
     `
 }
 
-},{"./components/VideoContainer.js":144,"choo/html":21}],143:[function(require,module,exports){
+},{"./components/VideoContainer.js":149,"choo/html":22}],148:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20367,7 +20805,7 @@ RTCInspector.prototype.stopMonitoring = function() {
   clearInterval(this.interval)
 }
 
-},{"choo/html":21,"nanocomponent":66,"xtend":137}],144:[function(require,module,exports){
+},{"choo/html":22,"nanocomponent":67,"xtend":142}],149:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20426,7 +20864,7 @@ VideoContainer.prototype.update = function (props) {
   return false
 }
 
-},{"choo/html":21,"nanocomponent":66,"xtend":137}],145:[function(require,module,exports){
+},{"choo/html":22,"nanocomponent":67,"xtend":142}],150:[function(require,module,exports){
 const Nano = require('nanocomponent')
 const css = 0
 const html = require('choo/html')
@@ -20504,7 +20942,7 @@ Dropdown.prototype.update = function (props) {
 
 }
 
-},{"choo/html":21,"juliangruber-shallow-equal/objects":63,"nanocomponent":66,"sheetify/insert":99,"xtend":137}],146:[function(require,module,exports){
+},{"choo/html":22,"juliangruber-shallow-equal/objects":62,"nanocomponent":67,"sheetify/insert":104,"xtend":142}],151:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20532,7 +20970,7 @@ function inputElement (name, defaultText, opts) {
   </div>`
 }
 
-},{"choo/html":21,"xtend":137}],147:[function(require,module,exports){
+},{"choo/html":22,"xtend":142}],152:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20568,7 +21006,7 @@ function Modal (opts) {
   }
 }
 
-},{"./panel.js":148,"assert":11,"choo/html":21,"xtend":137}],148:[function(require,module,exports){
+},{"./panel.js":153,"assert":11,"choo/html":22,"xtend":142}],153:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20609,7 +21047,7 @@ function Panel (opts) {
 
 }
 
-},{"assert":11,"choo/html":21,"xtend":137}],149:[function(require,module,exports){
+},{"assert":11,"choo/html":22,"xtend":142}],154:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20626,7 +21064,7 @@ function radioSelect(opts){
   </div>`
 }
 
-},{"choo/html":21}],150:[function(require,module,exports){
+},{"choo/html":22}],155:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20695,7 +21133,7 @@ function createBooleanElement(label, obj, callback){
   })
 }
 
-},{"./radioSelect.js":149,"./slider.js":151,"choo/html":21,"xtend":137}],151:[function(require,module,exports){
+},{"./radioSelect.js":154,"./slider.js":156,"choo/html":22,"xtend":142}],156:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20711,9 +21149,9 @@ function slider(opts){
   </div>`
 }
 
-},{"choo/html":21}],152:[function(require,module,exports){
-arguments[4][144][0].apply(exports,arguments)
-},{"choo/html":21,"dup":144,"nanocomponent":66,"xtend":137}],153:[function(require,module,exports){
+},{"choo/html":22}],157:[function(require,module,exports){
+arguments[4][149][0].apply(exports,arguments)
+},{"choo/html":22,"dup":149,"nanocomponent":67,"xtend":142}],158:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const RTCInspector = require('./components/RTCInspector.js')
@@ -20784,7 +21222,7 @@ function inspectorComponent (state, emit) {
   }
 }
 
-},{"./components/RTCInspector.js":143,"./components/VideoContainer.js":144,"choo/html":21}],154:[function(require,module,exports){
+},{"./components/RTCInspector.js":148,"./components/VideoContainer.js":149,"choo/html":22}],159:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20880,7 +21318,7 @@ function loginView (state, emit) {
   }
 }
 
-},{"./components/dropdown.js":145,"./components/input.js":146,"./components/videocontainer.js":152,"choo/html":21}],155:[function(require,module,exports){
+},{"./components/dropdown.js":150,"./components/input.js":151,"./components/videocontainer.js":157,"choo/html":22}],160:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20907,7 +21345,7 @@ function mainView (state, emit) {
   }
 }
 
-},{"./login.js":154,"./workspace.js":157,"choo/html":21}],156:[function(require,module,exports){
+},{"./login.js":159,"./workspace.js":162,"choo/html":22}],161:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 
@@ -20947,7 +21385,7 @@ function mediaListView (state, emit) {
     `
 }
 
-},{"choo/html":21}],157:[function(require,module,exports){
+},{"choo/html":22}],162:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20999,4 +21437,4 @@ function workspaceView (state, emit) {
     `
 }
 
-},{"./addBroadcast.js":140,"./allVideos.js":141,"./communication.js":142,"./components/panel.js":148,"./inspector.js":153,"./mediaList.js":156,"choo/html":21}]},{},[1]);
+},{"./addBroadcast.js":145,"./allVideos.js":146,"./communication.js":147,"./components/panel.js":153,"./inspector.js":158,"./mediaList.js":161,"choo/html":22}]},{},[1]);
