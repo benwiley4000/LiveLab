@@ -31,15 +31,15 @@ function inspectorComponent (state, emit) {
 
     ${state.media.byId[state.ui.inspector.trackId].peerId===state.user.uuid && state.media.byId[state.ui.inspector.trackId].name!=='default' ? html`<div class="f6 link dim ph3 pv2 mb2 dib white bg-dark-pink pointer" id="remove" onclick=${() => (emit('media:removeTrack', state.ui.inspector.trackId))}>Remove Broadcast</div>`
     : null }
-    ${inspector.render({
-      htmlProps: {
 
-      },
-      pc: state.ui.inspector.pc,
-      trackId: state.ui.inspector.trackId
-    })}
   </div>`
+  //   ${inspector.render({
+  //     htmlProps: {
 
+  //     },
+  //     pc: state.ui.inspector.pc,
+  //     trackId: state.ui.inspector.trackId
+  //   })}
   function popupWin () {
     var vidEl = document.querySelector('div#inspectorDiv > video')
     var el = document.querySelector('div#popupDiv')
