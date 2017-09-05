@@ -18,7 +18,11 @@ app.use(require('./models/peersModel.js'))
 app.use(require('./models/userModel.js'))
 app.use(require('./models/uiModel.js'))
 
-app.route('/', require('./views/main.js'))
+if (isElectron()) {
+	app.route('/', require('./views/main.js'))
+} else {
+	app.route('/index.html', require('./views/main.js'))
+}
 
 app.mount('body div')
 
