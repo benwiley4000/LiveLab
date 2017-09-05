@@ -1,4 +1,5 @@
 const { app } = require('electron')
+app.commandLine.appendSwitch("ignore-certificate-errors")
 const path = require('path')
 const window = require('electron-window')
 
