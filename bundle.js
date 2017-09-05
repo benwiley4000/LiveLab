@@ -898,6 +898,11 @@ function userModel (state, bus) {
       state.user.statusMessage = 'Disconnected from server ' + state.user.server + '\n'
       multiPeer._destroy()
       bus.emit('media:resetTracks')
+      bus.emit('peers:resetPeers')
+      bus.emit('peers:updatePeer', {
+        peerId: state.user.uuid,
+        nickname: state.user.nickname
+      })
       bus.emit('render')
     })
 
