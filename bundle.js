@@ -21182,9 +21182,9 @@ function inspectorComponent (state, emit) {
       id: (state.ui.inspector.trackId in state.media.byId) ?  state.media.byId[state.ui.inspector.trackId].track.id : null
     }) : null }
 
-    ${state.media.byId[state.ui.inspector.trackId].track.kind==='video' && popupWindow!==null ? html`<div class="f6 link dim ph3 pv2 mb2 dib white bg-dark-pink pointer" id="popupDiv" onclick=${() => (popupWin())}>Close Window</div>`
+    ${!isElectron() && state.media.byId[state.ui.inspector.trackId].track.kind==='video' && popupWindow!==null ? html`<div class="f6 link dim ph3 pv2 mb2 dib white bg-dark-pink pointer" id="popupDiv" onclick=${() => (popupWin())}>Close Window</div>`
     : null }
-    ${state.media.byId[state.ui.inspector.trackId].track.kind==='video' && popupWindow===null ? html`<div class="f6 link dim ph3 pv2 mb2 dib white bg-dark-pink pointer" id="popupDiv" onclick=${() => (popupWin())}>Open Window</div>`
+    ${!isElectron() && state.media.byId[state.ui.inspector.trackId].track.kind==='video' && popupWindow===null ? html`<div class="f6 link dim ph3 pv2 mb2 dib white bg-dark-pink pointer" id="popupDiv" onclick=${() => (popupWin())}>Open Window</div>`
     : null }
 
     ${state.media.byId[state.ui.inspector.trackId].peerId===state.user.uuid && state.media.byId[state.ui.inspector.trackId].name!=='default' ? html`<div class="f6 link dim ph3 pv2 mb2 dib white bg-dark-pink pointer" id="remove" onclick=${() => (emit('media:removeTrack', state.ui.inspector.trackId))}>Remove Broadcast</div>`
