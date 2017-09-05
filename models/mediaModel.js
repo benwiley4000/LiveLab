@@ -69,6 +69,11 @@ function mediaModel (state, bus) {
   })
 
   bus.on('media:removeTrack', function (trackId) {
+    if (state.media.byId[trackId].peerId && state.media.byId[trackId].peerId===state.user.uuid) {
+      bus.emit('peers:removeTrackFromPeers', trackId)
+      bus.emit('devices:removeWindows', trackId)
+      // bus.emit('user:updateBroadcastStream')
+    }
     delete state.media.byId[trackId]
     var index = state.media.all.indexOf(trackId)
     if(trackId === state.ui.inspector.trackId){
