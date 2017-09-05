@@ -161,6 +161,16 @@ function userModel (state, bus) {
       }
     })
 
+    bus.on('user:hangup', function() {
+      bus.emit('devices:setDefaultAudio', null)
+      bus.emit('devices:setDefaultVideo', null)
+      state.user.loggedIn = false
+      state.user.statusMessage = 'Disconnected from server ' + state.user.server + '\n'
+      multiPeer._destroy()
+      bus.emit('media:resetTracks')
+      bus.emit('render')
+    })
+
     state.user.statusMessage = 'Contacting server ' + state.user.server + '\n'
 
     bus.emit('render')

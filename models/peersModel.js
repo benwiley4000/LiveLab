@@ -70,4 +70,9 @@ function peersModel (state, bus) {
     delete state.peers.byId[peerId]
   })
   bus.emit('render')
+
+  bus.on('peers:resetPeers', function() {
+    state.peers.byId = {}
+    state.peers.all = []
+  })
 }

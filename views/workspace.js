@@ -21,6 +21,7 @@ function workspaceView (state, emit) {
       <div class="fl w-70-ns w-100 pa2">
         ${communication(state, emit)}
       </div>
+      <div class="f6 v-btm fr link dim ph3 pv2 mb2 db white bg-dark-pink pointer" onclick=${() => (emit('user:hangup'))}>Hangup</div>
       <div class="fl w-30-ns w-100 mw6 h-100">
         ${panel(
           {

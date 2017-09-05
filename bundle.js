@@ -149,6 +149,13 @@ MultiPeer.prototype._attachPeerEvents = function (p, _id) {
   }.bind(this, _id))
 }
 
+MultiPeer.prototype._destroy = function () {
+  Object.values(this.peers).forEach( function (peer) {
+    peer.destroy()
+  })
+  this.signaller.close()
+}
+
 module.exports = MultiPeer
 
 },{"events":46,"inherits":59,"simple-peer":110,"socket.io-client":111}],3:[function(require,module,exports){
@@ -384,7 +391,6 @@ function devicesModel (state, bus) {
     if (state.devices.popupwindows[trackId]) {
       state.devices.popupwindows[trackId].close()
       delete state.devices.popupwindows[trackId]
-      console.log('state.devices.popupwindows', state.devices.popupwindows)
     }
   })
 
@@ -572,6 +578,11 @@ function mediaModel (state, bus) {
 
     bus.emit('render')
   })
+
+  bus.on('media:resetTracks', function() {
+    state.media.byId = {}
+    state.media.all = []
+  })
   // Hacky way to avoid duplicating getusermedia calls:
   // compare requested media constraints to constraints of existing tracks, if there is none, return null..
   // else return existing mediaStreamTrack
@@ -675,6 +686,11 @@ function peersModel (state, bus) {
     delete state.peers.byId[peerId]
   })
   bus.emit('render')
+
+  bus.on('peers:resetPeers', function() {
+    state.peers.byId = {}
+    state.peers.all = []
+  })
 }
 
 },{}],7:[function(require,module,exports){
@@ -868,6 +884,16 @@ function userModel (state, bus) {
         if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
         if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
       }
+    })
+
+    bus.on('user:hangup', function() {
+      bus.emit('devices:setDefaultAudio', null)
+      bus.emit('devices:setDefaultVideo', null)
+      state.user.loggedIn = false
+      state.user.statusMessage = 'Disconnected from server ' + state.user.server + '\n'
+      multiPeer._destroy()
+      bus.emit('media:resetTracks')
+      bus.emit('render')
     })
 
     state.user.statusMessage = 'Contacting server ' + state.user.server + '\n'
@@ -20931,6 +20957,7 @@ function workspaceView (state, emit) {
       <div class="fl w-70-ns w-100 pa2">
         ${communication(state, emit)}
       </div>
+      <div class="f6 v-btm fr link dim ph3 pv2 mb2 db white bg-dark-pink pointer" onclick=${() => (emit('user:hangup'))}>Hangup</div>
       <div class="fl w-30-ns w-100 mw6 h-100">
         ${panel(
           {

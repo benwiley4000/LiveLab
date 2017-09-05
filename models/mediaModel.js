@@ -78,6 +78,11 @@ function mediaModel (state, bus) {
 
     bus.emit('render')
   })
+
+  bus.on('media:resetTracks', function() {
+    state.media.byId = {}
+    state.media.all = []
+  })
   // Hacky way to avoid duplicating getusermedia calls:
   // compare requested media constraints to constraints of existing tracks, if there is none, return null..
   // else return existing mediaStreamTrack
