@@ -727,7 +727,11 @@ function uiModel (state, bus) {
       bus.emit('render')
   })
 
-
+  bus.on('ui:closeInspector', function () {
+    state.ui.inspector.trackId = null
+    state.ui.inspector.pc = null
+    bus.emit('render')
+  })
 
 }
 
@@ -21169,7 +21173,7 @@ function inspectorComponent (state, emit) {
     popupWindow = state.devices.popupwindows[name]
   }
 
-  return  html`<div class="h5 overflow-scroll pa2">
+  return  html`<div id="inspectorDiv" class="h5 overflow-scroll pa2">
     ${state.media.byId[state.ui.inspector.trackId].track.kind==='video' ? previewVid.render({
       htmlProps: {
         class: 'h4 w4'
@@ -21426,9 +21430,10 @@ function workspaceView (state, emit) {
             htmlProps: {
               class: "w-100 f7 mv2"
             },
-            closable: false,
+            closable: true,
             header: "Stats: " + state.ui.inspector.trackId,
-            contents: inspector(state,emit)
+            contents: inspector(state,emit),
+            onClose: () => (emit('ui:closeInspector', 'close'))
           }
         ) : ''}
       </div>

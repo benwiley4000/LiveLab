@@ -38,9 +38,10 @@ function workspaceView (state, emit) {
             htmlProps: {
               class: "w-100 f7 mv2"
             },
-            closable: false,
+            closable: true,
             header: "Stats: " + state.ui.inspector.trackId,
-            contents: inspector(state,emit)
+            contents: inspector(state,emit),
+            onClose: () => (emit('ui:closeInspector', 'close'))
           }
         ) : ''}
       </div>

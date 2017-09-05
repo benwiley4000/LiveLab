@@ -22,6 +22,10 @@ function uiModel (state, bus) {
       bus.emit('render')
   })
 
-
+  bus.on('ui:closeInspector', function () {
+    state.ui.inspector.trackId = null
+    state.ui.inspector.pc = null
+    bus.emit('render')
+  })
 
 }
