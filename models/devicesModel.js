@@ -8,6 +8,7 @@ module.exports = devicesModel
 function devicesModel (state, bus) {
   // object representing the user's input and output devices
   state.devices = xtend({
+    popupwindows: {},
     videoinput: {
       byId: {},
       all: []
@@ -59,17 +60,13 @@ function devicesModel (state, bus) {
     })
   }
 
-
-
   bus.on('devices:setDefaultAudio', function (val) {
     setDefaultMedia(val, "audio")
-
   })
 
   bus.on('devices:setDefaultVideo', function (val) {
     setDefaultMedia(val, "video")
   })
-
 
   function setDefaultMedia (val, kind) {
     if (state.devices.default.inputDevices[kind] !== val) {
@@ -183,6 +180,14 @@ function devicesModel (state, bus) {
         })
       }
     })
+  })
+
+  bus.on('devices:removeWindows', function(trackId) {
+    if (state.devices.popupwindows[trackId]) {
+      state.devices.popupwindows[trackId].close()
+      delete state.devices.popupwindows[trackId]
+      console.log('state.devices.popupwindows', state.devices.popupwindows)
+    }
   })
 
   function updateBroadcastPreview(callback){
