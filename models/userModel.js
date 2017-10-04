@@ -190,6 +190,11 @@ function userModel (state, bus) {
     }
   })
 
+  bus.on('user:sendChatMessage', function(msg){
+    multiPeer.sendToAll(msg)
+  })
+
+
   function getLocalCommunicationStream () {
     var tracks = []
     if (state.devices.default.previewTracks.audio !== null) {
