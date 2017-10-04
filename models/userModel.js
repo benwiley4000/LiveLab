@@ -151,13 +151,18 @@ function userModel (state, bus) {
     //received data from remote peer
     multiPeer.on('data', function (data) {
       // data is updated user and track information
-      if (data.data && data.data.type === 'updatePeerInfo') {
-      /*  var peerData = xtend({
-          peerId: data.id
-        }, data.data.message)
-        console.log('NEW PEPEER DATA', peerData)*/
-        if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
-        if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
+      if (data.data){
+        if(data.data.type === 'updatePeerInfo') {
+        /*  var peerData = xtend({
+            peerId: data.id
+          }, data.data.message)
+          console.log('NEW PEPEER DATA', peerData)*/
+          if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
+          if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
+        } else if(data.data.type=== 'chatMessage'){
+          console.log("RECEIVED CHAT MESSAGE", data)
+          bus.emit('ui:receivedNewChat', data.data.message)
+        }
       }
     })
 
@@ -191,7 +196,7 @@ function userModel (state, bus) {
   })
 
   bus.on('user:sendChatMessage', function(msg){
-    multiPeer.sendToAll(msg)
+    multiPeer.sendToAll(JSON.stringify({type: 'chatMessage', message: msg}))
   })
 
 

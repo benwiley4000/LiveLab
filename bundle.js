@@ -739,7 +739,7 @@ function uiModel (state, bus) {
       message: state.ui.chat.current,
       date: Date.now()
     }
-  //  bus.emit('user:sendChatMessage', chatObj)
+    bus.emit('user:sendChatMessage', chatObj)
     appendNewChat(chatObj)
     state.ui.chat.current = ""
     bus.emit('render')
@@ -747,7 +747,8 @@ function uiModel (state, bus) {
   })
 
   bus.on('ui:receivedNewChat', function (chatObj){
-
+    appendNewChat(chatObj)
+    bus.emit('render')
   })
 
   bus.on('ui:updateChat', function(text){
@@ -761,10 +762,15 @@ function uiModel (state, bus) {
   })
 
   function appendNewChat(chatObj){
-      console.log(chatObj)
-      state.ui.chat.messages.push(chatObj)
-      console.log(state.ui.chat)
-     }
+    //  console.log(chatObj)
+      if(state.peers.byId[chatObj.peerId]){
+        chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
+        state.ui.chat.messages.push(chatObj)
+      } else {
+        console.log("USER NOT FOUND", chatObj)
+      }
+
+    }
 }
 
 },{}],8:[function(require,module,exports){
@@ -921,13 +927,18 @@ function userModel (state, bus) {
     //received data from remote peer
     multiPeer.on('data', function (data) {
       // data is updated user and track information
-      if (data.data && data.data.type === 'updatePeerInfo') {
-      /*  var peerData = xtend({
-          peerId: data.id
-        }, data.data.message)
-        console.log('NEW PEPEER DATA', peerData)*/
-        if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
-        if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
+      if (data.data){
+        if(data.data.type === 'updatePeerInfo') {
+        /*  var peerData = xtend({
+            peerId: data.id
+          }, data.data.message)
+          console.log('NEW PEPEER DATA', peerData)*/
+          if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
+          if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
+        } else if(data.data.type=== 'chatMessage'){
+          console.log("RECEIVED CHAT MESSAGE", data)
+          bus.emit('ui:receivedNewChat', data.data.message)
+        }
       }
     })
 
@@ -961,7 +972,7 @@ function userModel (state, bus) {
   })
 
   bus.on('user:sendChatMessage', function(msg){
-    multiPeer.sendToAll(msg)
+    multiPeer.sendToAll(JSON.stringify({type: 'chatMessage', message: msg}))
   })
 
 
@@ -20612,18 +20623,18 @@ module.exports = chatView
 function chatView (state, emit) {
   return html`
 
-    <div class="pa3 dib">
+    <div class="pa2 dib">
       <div>
         ${state.ui.chat.messages.map((obj)=>{
           return html`
             <tr>
-              <th class="pa1">${state.peers.byId[obj.peerId].nickname}:</th>
+              <th class="pa1">${obj.nickname}:</th>
               <td class="pa1">${obj.message}</td>
             </tr>
           `
         })}
       </div>
-      ${input('Chat', 'message', {
+      ${input('', 'message', {
         value: state.ui.chat.current,
         onkeyup: (e) => (emit('ui:updateChat', e.target.value))
       })}

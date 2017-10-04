@@ -34,7 +34,7 @@ function uiModel (state, bus) {
       message: state.ui.chat.current,
       date: Date.now()
     }
-  //  bus.emit('user:sendChatMessage', chatObj)
+    bus.emit('user:sendChatMessage', chatObj)
     appendNewChat(chatObj)
     state.ui.chat.current = ""
     bus.emit('render')
@@ -42,7 +42,8 @@ function uiModel (state, bus) {
   })
 
   bus.on('ui:receivedNewChat', function (chatObj){
-
+    appendNewChat(chatObj)
+    bus.emit('render')
   })
 
   bus.on('ui:updateChat', function(text){
@@ -56,8 +57,13 @@ function uiModel (state, bus) {
   })
 
   function appendNewChat(chatObj){
-      console.log(chatObj)
-      state.ui.chat.messages.push(chatObj)
-      console.log(state.ui.chat)
-     }
+    //  console.log(chatObj)
+      if(state.peers.byId[chatObj.peerId]){
+        chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
+        state.ui.chat.messages.push(chatObj)
+      } else {
+        console.log("USER NOT FOUND", chatObj)
+      }
+
+    }
 }
