@@ -38,9 +38,9 @@ var host = []
 io.on('connection', function (socket) {
    console.log("new connection", socket.id)
    
-   
      socket.on('join', function(room, _userData) {
        console.log("user", JSON.stringify(_userData))
+      if (Object.keys(userFromSocket).length < 4) {
        if(_userData.uuid){
          userFromSocket[socket.id] = _userData.uuid
          socketFromUser[_userData.uuid] = socket.id
@@ -52,7 +52,7 @@ io.on('connection', function (socket) {
       io.of('/').in(room).clients(function(error, clients){
         if (error) throw error;
       console.log(clients); // => [Anw2LatarvGVVXEIAAAD]
-}    );      
+      });      
 
 
       if(_userData.nickname == 'host') {
@@ -69,10 +69,13 @@ io.on('connection', function (socket) {
         socket.emit('ready', socket.id, host)
         console.log('host to guest', host)
       }
-    
-       
+
        // And then add the client to the room
       socket.join(room);
+      } else {
+        socket.emit('status', 'Room is currently full')
+        console.log('Room is currently full')
+      }
     //send updated list of peers to all clients. TODO: only room
      // io.sockets.emit('peers', peerUuids);
       

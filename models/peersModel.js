@@ -36,13 +36,20 @@ function peersModel (state, bus) {
       defaultTracks: {
         audio: null,
         video: null
-      }
+      },
+      defaultAudioVolume: 0.0
     }, state.peers.byId[peer.peerId], peer)
 
-    console.log("NEW  PEER INFO", state.peers.byId)
+    console.log("NEW  PEER INFO", peer)
     if (state.peers.all.indexOf(peer.peerId) < 0) {
       state.peers.all.push(peer.peerId)
     }
+    bus.emit('render')
+  })
+
+  bus.on('peers:changeDafultVolume', function (opts) {
+    state.peers.byId[opts.peer].defaultAudioVolume = opts.volume
+    console.log('new vol', opts.volume)
     bus.emit('render')
   })
 

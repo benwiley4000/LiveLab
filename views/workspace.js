@@ -5,7 +5,6 @@ const communication = require('./communication.js')
 const allVideos = require('./allVideos.js')
 const mediaList = require('./mediaList.js')
 const panel = require('./components/panel.js')
-const chat = require('./chat.js')
 const AddBroadcast = require('./addBroadcast.js')
 
 const inspector = require('./inspector.js')
@@ -29,19 +28,9 @@ function workspaceView (state, emit) {
             htmlProps: {
               class: "w-100"
             },
-            contents:  mediaList(state, emit),
+            contents: mediaList(state, emit),
             closable: false,
             header:   "Shared Media"
-          }
-        )}
-        ${panel(
-          {
-            htmlProps: {
-              class: "w-100"
-            },
-            contents: chat(state, emit),
-            closable: false,
-            header:   "Chat"
           }
         )}
         ${state.ui.inspector.trackId !== null ? panel(
