@@ -63,7 +63,7 @@ function communicationView (state, emit) {
           state.devices.popupwindows[videoId].focus()
         } else {console.log('no win')}
       }
-      
+    
     } else {
       return null
     }

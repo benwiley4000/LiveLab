@@ -78,16 +78,18 @@ function mediaModel (state, bus) {
     var index = state.media.all.indexOf(trackId)
     if(trackId === state.ui.inspector.trackId){
       bus.emit('ui:updateInspectorTrack', {trackId: null, pc: null})
+      bus.emit('ui:closeInspector', 'close')
     }
     if (index > -1) state.media.all.splice(index, 1)
 
     bus.emit('render')
   })
-
+  
   bus.on('media:resetTracks', function() {
     state.media.byId = {}
     state.media.all = []
   })
+
   // Hacky way to avoid duplicating getusermedia calls:
   // compare requested media constraints to constraints of existing tracks, if there is none, return null..
   // else return existing mediaStreamTrack

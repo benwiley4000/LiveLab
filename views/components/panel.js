@@ -35,5 +35,4 @@ function Panel (opts) {
             ${opts.contents}
           </div>
     `
-
 }

@@ -61,14 +61,23 @@ function peersModel (state, bus) {
     if (opts.isDefault) {
       state.peers.byId[opts.peerId].defaultTracks[opts.kind] = opts.trackId
     }
-    console.log("peersTracks", state.peers.byId[opts.peerId].tracks)
+    console.log("peersTracks", opts)
     bus.emit('render')
+  })
+
+  bus.on('peers:removeTrackFromPeers', function (trackId) {
+    state.peers.all.forEach(function (peer) {
+      var index = state.peers.byId[peer].tracks.indexOf(trackId)
+      if (index > -1) state.peers.byId[peer].tracks.splice(index, 1)
+    })
+    bus.emit('user:updateBroadcastStream')
   })
 
   bus.on('peers:removePeer', function (peerId) {
     // remove all tracks associated with this peer
     state.peers.byId[peerId].tracks.forEach(function (trackId) {
       bus.emit('media:removeTrack', trackId)
+      bus.emit('devices:removeWindows', trackId)
 
     })
     state.peers.byId[peerId].tracks = []

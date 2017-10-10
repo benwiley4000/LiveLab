@@ -186,6 +186,7 @@ function devicesModel (state, bus) {
     if (state.devices.popupwindows[trackId]) {
       state.devices.popupwindows[trackId].close()
       delete state.devices.popupwindows[trackId]
+      console.log('state.devices.popupwindows', state.devices.popupwindows)
     }
   })
 

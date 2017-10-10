@@ -36,6 +36,7 @@ RTCInspector.prototype.createElement = function (props) {
 
 // update stream if track id has changed
 RTCInspector.prototype.update = function (props) {
+  console.log('props', props)
   this.props.trackId = props.trackId
   this.props.pc = props.pc
   //console.log("INSPECT", props)

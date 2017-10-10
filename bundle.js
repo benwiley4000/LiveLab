@@ -26,7 +26,7 @@ if (isElectron()) {
 
 app.mount('body div')
 
-},{"./models/devicesModel.js":4,"./models/mediaModel.js":5,"./models/peersModel.js":6,"./models/uiModel.js":7,"./models/userModel.js":8,"./views/main.js":161,"choo":23,"choo-expose":20,"choo-log":21}],2:[function(require,module,exports){
+},{"./models/devicesModel.js":4,"./models/mediaModel.js":5,"./models/peersModel.js":6,"./models/uiModel.js":7,"./models/userModel.js":8,"./views/main.js":162,"choo":23,"choo-expose":20,"choo-log":21}],2:[function(require,module,exports){
 // Module for handling connections to multiple peers
 
 var io = require('socket.io-client')
@@ -402,6 +402,7 @@ function devicesModel (state, bus) {
     if (state.devices.popupwindows[trackId]) {
       state.devices.popupwindows[trackId].close()
       delete state.devices.popupwindows[trackId]
+      console.log('state.devices.popupwindows', state.devices.popupwindows)
     }
   })
 
@@ -507,7 +508,6 @@ function getConstraintsFromSettings(settings, callback) {
     callback(null, allConstraints)
   }
 }
-
 },{"./availableConstraints.json":3,"enumerate-devices":45,"getusermedia":49}],5:[function(require,module,exports){
 // MEDIA::
 // For now: each peer only broadcasts one stream, each stream has an unlimited number of tracks corresponding to each audio and video device + specific constraint settings.
@@ -589,16 +589,18 @@ function mediaModel (state, bus) {
     var index = state.media.all.indexOf(trackId)
     if(trackId === state.ui.inspector.trackId){
       bus.emit('ui:updateInspectorTrack', {trackId: null, pc: null})
+      bus.emit('ui:closeInspector', 'close')
     }
     if (index > -1) state.media.all.splice(index, 1)
 
     bus.emit('render')
   })
-
+  
   bus.on('media:resetTracks', function() {
     state.media.byId = {}
     state.media.all = []
   })
+
   // Hacky way to avoid duplicating getusermedia calls:
   // compare requested media constraints to constraints of existing tracks, if there is none, return null..
   // else return existing mediaStreamTrack
@@ -693,14 +695,23 @@ function peersModel (state, bus) {
     if (opts.isDefault) {
       state.peers.byId[opts.peerId].defaultTracks[opts.kind] = opts.trackId
     }
-    console.log("peersTracks", state.peers.byId[opts.peerId].tracks)
+    console.log("peersTracks", opts)
     bus.emit('render')
+  })
+
+  bus.on('peers:removeTrackFromPeers', function (trackId) {
+    state.peers.all.forEach(function (peer) {
+      var index = state.peers.byId[peer].tracks.indexOf(trackId)
+      if (index > -1) state.peers.byId[peer].tracks.splice(index, 1)
+    })
+    bus.emit('user:updateBroadcastStream')
   })
 
   bus.on('peers:removePeer', function (peerId) {
     // remove all tracks associated with this peer
     state.peers.byId[peerId].tracks.forEach(function (trackId) {
       bus.emit('media:removeTrack', trackId)
+      bus.emit('devices:removeWindows', trackId)
 
     })
     state.peers.byId[peerId].tracks = []
@@ -731,6 +742,12 @@ function uiModel (state, bus) {
     trackId: null,
     pc: null, //peer connection to be inspected
     selectedTab: "track" //which inspector tab is currently open
+  },
+  chat: {
+    messages: [
+
+    ],
+    current: ""
   }
   }, state.ui)
 
@@ -741,14 +758,45 @@ function uiModel (state, bus) {
       bus.emit('render')
   })
 
+  bus.on('ui:sendChatMessage', function(){
+    var chatObj = {
+      peerId: state.user.uuid,
+      message: state.ui.chat.current,
+      date: Date.now()
+    }
+    bus.emit('user:sendChatMessage', chatObj)
+    appendNewChat(chatObj)
+    state.ui.chat.current = ""
+    bus.emit('render')
+
+  })
+
+  bus.on('ui:receivedNewChat', function (chatObj){
+    appendNewChat(chatObj)
+    bus.emit('render')
+  })
+
+  bus.on('ui:updateChat', function(text){
+    state.ui.chat.current = text
+  })
+
   bus.on('ui:closeInspector', function () {
     state.ui.inspector.trackId = null
     state.ui.inspector.pc = null
     bus.emit('render')
   })
 
-}
+  function appendNewChat(chatObj){
+    //  console.log(chatObj)
+      if(state.peers.byId[chatObj.peerId]){
+        chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
+        state.ui.chat.messages.push(chatObj)
+      } else {
+        console.log("USER NOT FOUND", chatObj)
+      }
 
+    }
+}
 },{}],8:[function(require,module,exports){
 var xtend = Object.assign
 var shortid = require('shortid')
@@ -903,18 +951,18 @@ function userModel (state, bus) {
     //received data from remote peer
     multiPeer.on('data', function (data) {
       // data is updated user and track information
-      if (data.data && data.data.type === 'updatePeerInfo') {
-      /*  var peerData = xtend({
-          peerId: data.id
-        }, data.data.message)
-        console.log('NEW PEPEER DATA', peerData)*/
-        if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
-        if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
-      } else {
-        var dataEl = document.getElementById(data.id  + '_Received')
-        dataEl.value = data.data
-        bus.emit('dataChannel', data.data)
-        // bus.emit('render')
+      if (data.data){
+        if(data.data.type === 'updatePeerInfo') {
+        /*  var peerData = xtend({
+            peerId: data.id
+          }, data.data.message)
+          console.log('NEW PEPEER DATA', peerData)*/
+          if('peer' in data.data.message) bus.emit('peers:updatePeer', data.data.message.peer)
+          if('tracks' in data.data.message) bus.emit('media:updateTrackInfo', data.data.message.tracks)
+        } else if(data.data.type=== 'chatMessage'){
+          console.log("RECEIVED CHAT MESSAGE", data)
+          bus.emit('ui:receivedNewChat', data.data.message)
+        }
       }
     })
 
@@ -951,6 +999,10 @@ function userModel (state, bus) {
       multiPeer.stream = stream
       multiPeer.reinitAll()
     }
+  })
+
+  bus.on('user:sendChatMessage', function(msg){
+    multiPeer.sendToAll(JSON.stringify({type: 'chatMessage', message: msg}))
   })
 
   function getLocalCommunicationStream () {
@@ -9674,12 +9726,9 @@ function Nanocomponent (name) {
   this._loaded = false // Used to debounce on-load when child-reordering
   this._rootNodeName = null
   this._name = name || 'nanocomponent'
-  this._rerender = false
 
   this._handleLoad = this._handleLoad.bind(this)
   this._handleUnload = this._handleUnload.bind(this)
-
-  this._arguments = []
 
   var self = this
 
@@ -9702,8 +9751,7 @@ Nanocomponent.prototype.render = function () {
     timing()
     return el
   } else if (this.element) {
-    var shouldUpdate = this._rerender || this.update.apply(this, args)
-    if (this._rerender) this._render = false
+    var shouldUpdate = this.update.apply(this, args)
     if (shouldUpdate) {
       morph(this.element, this._handleRender(args))
       if (this.afterupdate) this.afterupdate(this.element)
@@ -9723,18 +9771,11 @@ Nanocomponent.prototype.render = function () {
   }
 }
 
-Nanocomponent.prototype.rerender = function () {
-  assert(this.element, 'nanocomponent: cant rerender on an unmounted dom node')
-  this._rerender = true
-  this.render.apply(this, this._arguments)
-}
-
 Nanocomponent.prototype._handleRender = function (args) {
   var el = this.createElement.apply(this, args)
   if (!this._rootNodeName) this._rootNodeName = el.nodeName
   assert(el instanceof window.HTMLElement, 'nanocomponent: createElement should return a DOM node')
   assert.equal(this._rootNodeName, el.nodeName, 'nanocomponent: root node types cannot differ between re-renders')
-  this._arguments = args
   return this._brandNode(this._ensureID(el))
 }
 
@@ -20643,7 +20684,7 @@ function addBroadcast (devices, emit, showElement) {
 
 }
 
-},{"./components/VideoContainer.js":149,"./components/dropdown.js":151,"./components/input.js":152,"./components/modal.js":153,"./components/radioSelect.js":155,"./components/settingsUI.js":156,"choo/html":22}],146:[function(require,module,exports){
+},{"./components/VideoContainer.js":150,"./components/dropdown.js":152,"./components/input.js":153,"./components/modal.js":154,"./components/radioSelect.js":156,"./components/settingsUI.js":157,"choo/html":22}],146:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const VideoEl = require('./components/VideoContainer.js')
@@ -20689,7 +20730,46 @@ function allVideos (state, emit) {
     `
 }
 
-},{"./components/VideoContainer.js":149,"choo/html":22}],147:[function(require,module,exports){
+},{"./components/VideoContainer.js":150,"choo/html":22}],147:[function(require,module,exports){
+'use strict'
+const html = require('choo/html')
+const input = require('./components/input.js')
+
+module.exports = chatView
+
+function chatView (state, emit) {
+
+  var scrollEl = html`<div onload=${(e) => console.log('loaded CHILD!', e)} class="h4 overflow-y-scroll">
+    ${state.ui.chat.messages.map((obj)=>{
+      return html`
+        <tr>
+          <th class="pa1">${obj.nickname}:</th>
+          <td class="pa1">${obj.message}</td>
+        </tr>
+      `
+    })}
+  </div>`
+
+//  scrollEl.scrollTop = scrollEl.scrollHeight
+  //console.log('SROLL EL', scrollEl, scrollEl.scrollTop, scrollEl.scrollHeight)
+  return html`
+    <div  onload=${(e) => console.log('loaded!', e)} class="pa2 dib w-100">
+      ${scrollEl}
+      ${input('', 'message', {
+        value: state.ui.chat.current,
+        onkeyup: (e) => {
+          if(e.keyCode=== 13){
+            emit('ui:sendChatMessage')
+          } else {
+            emit('ui:updateChat', e.target.value)
+          }
+        }
+      })}
+      <div class="f6 fr ma2 link ph3 pv2 mb2 white bg-dark-pink pointer" onclick=${() => (emit('ui:sendChatMessage'))}>Send</div>
+    </div>
+    `
+}
+},{"./components/input.js":153,"choo/html":22}],148:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const VideoEl = require('./components/videocontainer.js')
@@ -20712,6 +20792,7 @@ function communicationView (state, emit) {
     var peerIndex = state.peers.all[index]
     if (peerIndex) {
       var videoId = state.peers.byId[peerIndex].defaultTracks.video
+      console.log('videoId', videoId)
       var audioId = state.peers.byId[peerIndex].defaultTracks.audio
       return html`
       <div class="fl w-50 pa1" id="commDiv_${peerIndex}">
@@ -20750,12 +20831,15 @@ function communicationView (state, emit) {
       }
 
       function videoSwitch (e) {
+        // console.log('state.devices.popupwindows', state.devices.popupwindows)
+        // console.log('state.peers.byId', state.peers.byId)
+        // console.log('videoId', videoId)
         var videoId = state.peers.byId[peerIndex].defaultTracks.video
         if (state.devices.popupwindows[videoId]) {
           state.devices.popupwindows[videoId].focus()
         } else {console.log('no win')}
       }
-      
+    
     } else {
       return null
     }
@@ -20768,7 +20852,7 @@ function communicationView (state, emit) {
     `
 }
 
-},{"./components/audiocontainer.js":150,"./components/slider.js":157,"./components/videocontainer.js":158,"choo/html":22}],148:[function(require,module,exports){
+},{"./components/audiocontainer.js":151,"./components/slider.js":158,"./components/videocontainer.js":159,"choo/html":22}],149:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20807,6 +20891,7 @@ RTCInspector.prototype.createElement = function (props) {
 
 // update stream if track id has changed
 RTCInspector.prototype.update = function (props) {
+  console.log('props', props)
   this.props.trackId = props.trackId
   this.props.pc = props.pc
   //console.log("INSPECT", props)
@@ -20869,7 +20954,7 @@ RTCInspector.prototype.stopMonitoring = function() {
   clearInterval(this.interval)
 }
 
-},{"choo/html":22,"nanocomponent":67,"xtend":142}],149:[function(require,module,exports){
+},{"choo/html":22,"nanocomponent":67,"xtend":142}],150:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20927,8 +21012,7 @@ VideoContainer.prototype.update = function (props) {
 
   return false
 }
-
-},{"choo/html":22,"nanocomponent":67,"xtend":142}],150:[function(require,module,exports){
+},{"choo/html":22,"nanocomponent":67,"xtend":142}],151:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -20986,7 +21070,7 @@ AudioContainer.prototype.update = function (props) {
 
   return false
 }
-},{"choo/html":22,"nanocomponent":67,"xtend":142}],151:[function(require,module,exports){
+},{"choo/html":22,"nanocomponent":67,"xtend":142}],152:[function(require,module,exports){
 const Nano = require('nanocomponent')
 const css = 0
 const html = require('choo/html')
@@ -21064,7 +21148,7 @@ Dropdown.prototype.update = function (props) {
 
 }
 
-},{"choo/html":22,"juliangruber-shallow-equal/objects":62,"nanocomponent":67,"sheetify/insert":104,"xtend":142}],152:[function(require,module,exports){
+},{"choo/html":22,"juliangruber-shallow-equal/objects":62,"nanocomponent":67,"sheetify/insert":104,"xtend":142}],153:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21092,7 +21176,7 @@ function inputElement (name, defaultText, opts) {
   </div>`
 }
 
-},{"choo/html":22,"xtend":142}],153:[function(require,module,exports){
+},{"choo/html":22,"xtend":142}],154:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21128,7 +21212,7 @@ function Modal (opts) {
   }
 }
 
-},{"./panel.js":154,"assert":11,"choo/html":22,"xtend":142}],154:[function(require,module,exports){
+},{"./panel.js":155,"assert":11,"choo/html":22,"xtend":142}],155:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21166,10 +21250,9 @@ function Panel (opts) {
             ${opts.contents}
           </div>
     `
-
 }
 
-},{"assert":11,"choo/html":22,"xtend":142}],155:[function(require,module,exports){
+},{"assert":11,"choo/html":22,"xtend":142}],156:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21186,7 +21269,7 @@ function radioSelect(opts){
   </div>`
 }
 
-},{"choo/html":22}],156:[function(require,module,exports){
+},{"choo/html":22}],157:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21255,7 +21338,7 @@ function createBooleanElement(label, obj, callback){
   })
 }
 
-},{"./radioSelect.js":155,"./slider.js":157,"choo/html":22,"xtend":142}],157:[function(require,module,exports){
+},{"./radioSelect.js":156,"./slider.js":158,"choo/html":22,"xtend":142}],158:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21271,9 +21354,9 @@ function slider(opts){
   </div>`
 }
 
-},{"choo/html":22}],158:[function(require,module,exports){
-arguments[4][149][0].apply(exports,arguments)
-},{"choo/html":22,"dup":149,"nanocomponent":67,"xtend":142}],159:[function(require,module,exports){
+},{"choo/html":22}],159:[function(require,module,exports){
+arguments[4][150][0].apply(exports,arguments)
+},{"choo/html":22,"dup":150,"nanocomponent":67,"xtend":142}],160:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 const RTCInspector = require('./components/RTCInspector.js')
@@ -21370,7 +21453,9 @@ function inspectorComponent (state, emit) {
         delete state.devices.popupwindows[name]
         el.innerHTML = 'Open Window'
       }
-      vidEl.onclick = function() { popupWindow.focus() }
+      vidEl.onclick = function() {
+        popupWindow.focus()
+      }
       el.innerHTML = 'Close Window'
     } else {
       popupWindow.close()
@@ -21388,7 +21473,7 @@ function inspectorComponent (state, emit) {
 
 }
 
-},{"./components/RTCInspector.js":148,"./components/audiocontainer.js":150,"./components/slider.js":157,"./components/videocontainer.js":158,"choo/html":22}],160:[function(require,module,exports){
+},{"./components/RTCInspector.js":149,"./components/audiocontainer.js":151,"./components/slider.js":158,"./components/videocontainer.js":159,"choo/html":22}],161:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21484,7 +21569,7 @@ function loginView (state, emit) {
   }
 }
 
-},{"./components/dropdown.js":151,"./components/input.js":152,"./components/videocontainer.js":158,"choo/html":22}],161:[function(require,module,exports){
+},{"./components/dropdown.js":152,"./components/input.js":153,"./components/videocontainer.js":159,"choo/html":22}],162:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21511,7 +21596,7 @@ function mainView (state, emit) {
   }
 }
 
-},{"./login.js":160,"./workspace.js":163,"choo/html":22}],162:[function(require,module,exports){
+},{"./login.js":161,"./workspace.js":164,"choo/html":22}],163:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 
@@ -21551,7 +21636,7 @@ function mediaListView (state, emit) {
     `
 }
 
-},{"choo/html":22}],163:[function(require,module,exports){
+},{"choo/html":22}],164:[function(require,module,exports){
 'use strict'
 
 const html = require('choo/html')
@@ -21559,6 +21644,7 @@ const communication = require('./communication.js')
 const allVideos = require('./allVideos.js')
 const mediaList = require('./mediaList.js')
 const panel = require('./components/panel.js')
+const chat = require('./chat.js')
 const AddBroadcast = require('./addBroadcast.js')
 
 const inspector = require('./inspector.js')
@@ -21582,9 +21668,19 @@ function workspaceView (state, emit) {
             htmlProps: {
               class: "w-100"
             },
-            contents: mediaList(state, emit),
+            contents:  mediaList(state, emit),
             closable: false,
             header:   "Shared Media"
+          }
+        )}
+        ${panel(
+          {
+            htmlProps: {
+              class: "w-100"
+            },
+            contents: chat(state, emit),
+            closable: false,
+            header:   "Chat"
           }
         )}
         ${state.ui.inspector.trackId !== null ? panel(
@@ -21603,5 +21699,4 @@ function workspaceView (state, emit) {
     </div>
     `
 }
-
-},{"./addBroadcast.js":145,"./allVideos.js":146,"./communication.js":147,"./components/panel.js":154,"./inspector.js":159,"./mediaList.js":162,"choo/html":22}]},{},[1]);
+},{"./addBroadcast.js":145,"./allVideos.js":146,"./chat.js":147,"./communication.js":148,"./components/panel.js":155,"./inspector.js":160,"./mediaList.js":163,"choo/html":22}]},{},[1]);

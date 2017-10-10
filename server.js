@@ -81,8 +81,6 @@ io.on('connection', function (socket) {
       
       });
 
-    
-  
      socket.on('signal', function(data) {
       // console.log("forwarding signal " + JSON.stringify(data))
       var client = io.sockets.connected[socketFromUser[data.id]];
@@ -99,12 +97,11 @@ io.on('connection', function (socket) {
       delete userFromSocket[socket.id]
       console.log("socketFromUser", socketFromUser)
       console.log("userFromSocket", userFromSocket)
-      if (uuid == host[0]) {
-        host =[]
+      if (host.includes(uuid)) {
+        var index = host.indexOf(uuid)
+        host.splice(index, 1)
         console.log("host", host)
-      }
+      } else {console.log("not a host")}
      })
-
-
     ///TO DO: on disconnect, remove from label dictionary
 });
