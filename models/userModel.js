@@ -16,8 +16,20 @@ function userModel (state, bus) {
     loggedIn: false,
     nickname: "olivia",
     statusMessage: '',
-    multiPeer: null
+    multiPeer: null,
+    osc: null
   }, state.user)
+
+
+  if (isElectron()) {
+    state.user.osc = OSC()
+    ipcRenderer.on('oscSend', (event, msg) => {
+      console.log('OSC LOCAL RECEIVED', msg)
+      if (multiPeer !== null) {
+        bus.emit('user:sendOSC', msg)
+      }
+    })
+  }
 
 //login page ui events
   bus.emit('peers:updatePeer', {
@@ -162,6 +174,10 @@ function userModel (state, bus) {
         } else if(data.data.type=== 'chatMessage'){
           console.log("RECEIVED CHAT MESSAGE", data)
           bus.emit('ui:receivedNewChat', data.data.message)
+        } else if(data.data.type=== 'OSC') {
+          console.log("RECEIVED REMOTE OSC", data)
+          ipcRenderer.send('oscShare', data.data.message.osc)
+          bus.emit('ui:receivedOSC', data.data.message)
         }
       }
     })
@@ -203,6 +219,14 @@ function userModel (state, bus) {
 
   bus.on('user:sendChatMessage', function(msg){
     multiPeer.sendToAll(JSON.stringify({type: 'chatMessage', message: msg}))
+  })
+
+  bus.on('user:sendOSC', function(msg){
+    var oscObj = {
+      peerId: state.user.uuid,
+      osc: msg
+    }
+    multiPeer.sendToAll(JSON.stringify({type: 'OSC', message: oscObj}))
   })
 
   function getLocalCommunicationStream () {

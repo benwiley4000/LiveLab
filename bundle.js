@@ -748,6 +748,17 @@ function uiModel (state, bus) {
 
     ],
     current: ""
+  },
+  localOSC: [
+    "",
+    ""
+  ],
+  remoteOSC: {
+    peer: "",
+    osc: [
+      "",
+      ""
+    ]
   }
   }, state.ui)
 
@@ -780,6 +791,37 @@ function uiModel (state, bus) {
     state.ui.chat.current = text
   })
 
+  // bus.on('ui:createLocalOSC', function(OSCInfo){
+  //   var OSCObj = {
+  //     source: {
+  //       address: OSCInfo.ipAddy,
+  //       port: OSCInfo.port
+  //     },
+  //     OSCaddress: OSCInfo.oscAddy,
+  //     value: 0,
+  //     active: true
+  //   }
+  //   state.ui.localOSC.push(OSCObj)
+  //   bus.emit('render')
+  // })
+
+  bus.on('ui:receivedOSC', function (OSCObj){
+    updateRemoteOSC(OSCObj)
+    bus.emit('render')
+  })
+
+  if (isElectron()) {
+    ipcRenderer.on('oscSend', (event, msg) => {
+      updateLocalOSC(msg)
+      bus.emit('render')
+    })
+  }
+
+  // bus.on('ui:localOSC', function (OSCObj){
+  //   updateLocalOSC(OSCObj)
+  //   bus.emit('render')
+  // })
+
   bus.on('ui:closeInspector', function () {
     state.ui.inspector.trackId = null
     state.ui.inspector.pc = null
@@ -787,15 +829,35 @@ function uiModel (state, bus) {
   })
 
   function appendNewChat(chatObj){
-    //  console.log(chatObj)
-      if(state.peers.byId[chatObj.peerId]){
-        chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
-        state.ui.chat.messages.push(chatObj)
-      } else {
-        console.log("USER NOT FOUND", chatObj)
-      }
-
+    if(state.peers.byId[chatObj.peerId]){
+      chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
+      state.ui.chat.messages.push(chatObj)
+    } else {
+      console.log("USER NOT FOUND", chatObj)
     }
+
+  }
+
+  function updateRemoteOSC(oscObj){
+    state.ui.remoteOSC.peer = state.peers.byId[oscObj.peerId].nickname
+    state.ui.remoteOSC.osc = oscObj.osc
+    console.log('oscObj.osc', oscObj.osc)
+    // var newOSC = true
+    // state.ui.remoteOSC.forEach( function(obj) {
+    //   if (obj.peer == OSCObj.peer && obj.OSCaddress == OSCObj.OSCaddress) {
+    //     obj = OSCObj
+    //     newOSC = false
+    //   }
+    // })
+    // if (newOSC) {
+    //   state.ui.remoteOSC.push(OSCObj)
+    // }
+  }
+
+  function updateLocalOSC(msg) {
+    state.ui.localOSC = msg
+  }
+
 }
 },{}],8:[function(require,module,exports){
 var xtend = Object.assign
@@ -816,8 +878,20 @@ function userModel (state, bus) {
     loggedIn: false,
     nickname: "olivia",
     statusMessage: '',
-    multiPeer: null
+    multiPeer: null,
+    osc: null
   }, state.user)
+
+
+  if (isElectron()) {
+    state.user.osc = OSC()
+    ipcRenderer.on('oscSend', (event, msg) => {
+      console.log('OSC LOCAL RECEIVED', msg)
+      if (multiPeer !== null) {
+        bus.emit('user:sendOSC', msg)
+      }
+    })
+  }
 
 //login page ui events
   bus.emit('peers:updatePeer', {
@@ -962,6 +1036,10 @@ function userModel (state, bus) {
         } else if(data.data.type=== 'chatMessage'){
           console.log("RECEIVED CHAT MESSAGE", data)
           bus.emit('ui:receivedNewChat', data.data.message)
+        } else if(data.data.type=== 'OSC') {
+          console.log("RECEIVED REMOTE OSC", data)
+          ipcRenderer.send('oscShare', data.data.message.osc)
+          bus.emit('ui:receivedOSC', data.data.message)
         }
       }
     })
@@ -1003,6 +1081,14 @@ function userModel (state, bus) {
 
   bus.on('user:sendChatMessage', function(msg){
     multiPeer.sendToAll(JSON.stringify({type: 'chatMessage', message: msg}))
+  })
+
+  bus.on('user:sendOSC', function(msg){
+    var oscObj = {
+      peerId: state.user.uuid,
+      osc: msg
+    }
+    multiPeer.sendToAll(JSON.stringify({type: 'OSC', message: oscObj}))
   })
 
   function getLocalCommunicationStream () {
@@ -20792,7 +20878,6 @@ function communicationView (state, emit) {
     var peerIndex = state.peers.all[index]
     if (peerIndex) {
       var videoId = state.peers.byId[peerIndex].defaultTracks.video
-      console.log('videoId', videoId)
       var audioId = state.peers.byId[peerIndex].defaultTracks.audio
       return html`
       <div class="fl w-50 pa1" id="commDiv_${peerIndex}">
@@ -20831,9 +20916,6 @@ function communicationView (state, emit) {
       }
 
       function videoSwitch (e) {
-        // console.log('state.devices.popupwindows', state.devices.popupwindows)
-        // console.log('state.peers.byId', state.peers.byId)
-        // console.log('videoId', videoId)
         var videoId = state.peers.byId[peerIndex].defaultTracks.video
         if (state.devices.popupwindows[videoId]) {
           state.devices.popupwindows[videoId].focus()
@@ -21453,9 +21535,7 @@ function inspectorComponent (state, emit) {
         delete state.devices.popupwindows[name]
         el.innerHTML = 'Open Window'
       }
-      vidEl.onclick = function() {
-        popupWindow.focus()
-      }
+      vidEl.onclick = function() { popupWindow.focus() }
       el.innerHTML = 'Close Window'
     } else {
       popupWindow.close()
@@ -21596,7 +21676,7 @@ function mainView (state, emit) {
   }
 }
 
-},{"./login.js":161,"./workspace.js":164,"choo/html":22}],163:[function(require,module,exports){
+},{"./login.js":161,"./workspace.js":165,"choo/html":22}],163:[function(require,module,exports){
 'use strict'
 const html = require('choo/html')
 
@@ -21638,6 +21718,85 @@ function mediaListView (state, emit) {
 
 },{"choo/html":22}],164:[function(require,module,exports){
 'use strict'
+const html = require('choo/html')
+const input = require('./components/input.js')
+
+module.exports = oscPanel
+
+function oscPanel (state, emit) {
+
+  var localEl = html`<div>
+    <tr>
+      <th class="pa1">Local: </th>
+      <td class="pa1">${state.ui.localOSC[0] + " " + state.ui.localOSC[1]}</td>
+    </tr>
+  </div>`
+
+  // var localEl = html`<div onload=${(e) => console.log('loaded!', e)} class="h4 overflow-y-scroll">
+  //   ${state.ui.localOSC.map((obj)=>{
+  //     return html`
+  //       <tr>
+  //         <td class="pa1">${obj.source.address} + ":" + ${obj.source.port}</td>
+  //         <td class="pa1">${obj.OSCaddress}</td>
+  //         <td class="pa1">${obj.value}</td>
+  //         <td class="pa1"><input type="checkbox" value=${obj.active} /></td>
+  //       </tr>
+  //     `
+  //   })}
+  // </div>`
+
+  var remoteEl = html`<div>
+    <tr>
+      <th class="pa1">${state.ui.remoteOSC.peer || "Remote"}: </th>
+      <td class="pa1">${state.ui.remoteOSC.osc[0] + " " + state.ui.remoteOSC.osc[1]}</td>
+    </tr>
+  </div>`
+
+  // var remoteEl = html`<div onload=${(e) => console.log('loaded!', e)} class="h4 overflow-y-scroll">
+  //   ${state.ui.remoteOSC.map((obj)=>{
+  //     return html`
+  //       <tr>
+  //         <th class="pa1">${obj.peer}</th>
+  //         <td class="pa1">${obj.source.address} + ":" + ${obj.source.port}</td>
+  //         <td class="pa1">${obj.OSCaddress}</td>
+  //         <td class="pa1">${obj.value}</td>
+  //         <td class="pa1"><input type="checkbox" value=${obj.active} /></td>
+  //       </tr>
+  //     `
+  //   })}
+  // </div>`
+
+  return html`
+    <div class="pa2 dib w-100">
+      ${localEl}
+      ${remoteEl}
+      <tr>
+        <td class="pa1">Send Port: 3333</td>
+        <td class="pa1">Receive Port: 4444</td>
+      </tr>
+    </div>
+    `
+
+  // return html`
+  //   <div  onload=${(e) => console.log('loaded!', e)} class="pa2 dib w-100">
+  //     ${localEl}
+  //     ${remoteEl}
+  //     <div class="f6 link dim ph3 pv2 mb2 dib">Send Port: 3333</div>
+  //     <div class="f6 link dim ph3 pv2 mb2 dib">Receive Port: 4444</div>
+  //     ${input('IP', 'ip address', {id: 'ip-address', value: '127.0.0.1'})}
+  //     ${input('Port', 'port', {id: 'port', value: '3333'})}
+  //     ${input('Address', 'osc address', {id: 'osc-address', value: '/addy'})}
+  //     <div class="f6 fr ma2 link ph3 pv2 mb2 white bg-dark-pink pointer" onClick=createLocalOSC() >Create</div>
+  //   </div>
+  //   `
+  // function createLocalOSC () {
+  //   var OSCInfo = {ipAddy: document.querySelector('#ip-address'), port: document.querySelector('#port'), oscAddy: document.querySelector('#osc-address')}
+  //   emit('ui:createLocalOSC', OSCInfo)
+  //   console.log('OSCInfo', OSCInfo)
+  // }
+}
+},{"./components/input.js":153,"choo/html":22}],165:[function(require,module,exports){
+'use strict'
 
 const html = require('choo/html')
 const communication = require('./communication.js')
@@ -21645,6 +21804,7 @@ const allVideos = require('./allVideos.js')
 const mediaList = require('./mediaList.js')
 const panel = require('./components/panel.js')
 const chat = require('./chat.js')
+const osc = require('./oscPanel.js')
 const AddBroadcast = require('./addBroadcast.js')
 
 const inspector = require('./inspector.js')
@@ -21683,6 +21843,16 @@ function workspaceView (state, emit) {
             header:   "Chat"
           }
         )}
+        ${isElectron() ? panel(
+          {
+            htmlProps: {
+              class: "w-100"
+            },
+            contents: osc(state, emit),
+            closable: false,
+            header:   "OSC"
+          }
+        ) : null}
         ${state.ui.inspector.trackId !== null ? panel(
           {
             htmlProps: {
@@ -21699,4 +21869,4 @@ function workspaceView (state, emit) {
     </div>
     `
 }
-},{"./addBroadcast.js":145,"./allVideos.js":146,"./chat.js":147,"./communication.js":148,"./components/panel.js":155,"./inspector.js":160,"./mediaList.js":163,"choo/html":22}]},{},[1]);
+},{"./addBroadcast.js":145,"./allVideos.js":146,"./chat.js":147,"./communication.js":148,"./components/panel.js":155,"./inspector.js":160,"./mediaList.js":163,"./oscPanel.js":164,"choo/html":22}]},{},[1]);

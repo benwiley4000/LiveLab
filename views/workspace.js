@@ -6,6 +6,7 @@ const allVideos = require('./allVideos.js')
 const mediaList = require('./mediaList.js')
 const panel = require('./components/panel.js')
 const chat = require('./chat.js')
+const osc = require('./oscPanel.js')
 const AddBroadcast = require('./addBroadcast.js')
 
 const inspector = require('./inspector.js')
@@ -44,6 +45,16 @@ function workspaceView (state, emit) {
             header:   "Chat"
           }
         )}
+        ${isElectron() ? panel(
+          {
+            htmlProps: {
+              class: "w-100"
+            },
+            contents: osc(state, emit),
+            closable: false,
+            header:   "OSC"
+          }
+        ) : null}
         ${state.ui.inspector.trackId !== null ? panel(
           {
             htmlProps: {

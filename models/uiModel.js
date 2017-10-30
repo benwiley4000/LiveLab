@@ -18,6 +18,17 @@ function uiModel (state, bus) {
 
     ],
     current: ""
+  },
+  localOSC: [
+    "",
+    ""
+  ],
+  remoteOSC: {
+    peer: "",
+    osc: [
+      "",
+      ""
+    ]
   }
   }, state.ui)
 
@@ -50,6 +61,37 @@ function uiModel (state, bus) {
     state.ui.chat.current = text
   })
 
+  // bus.on('ui:createLocalOSC', function(OSCInfo){
+  //   var OSCObj = {
+  //     source: {
+  //       address: OSCInfo.ipAddy,
+  //       port: OSCInfo.port
+  //     },
+  //     OSCaddress: OSCInfo.oscAddy,
+  //     value: 0,
+  //     active: true
+  //   }
+  //   state.ui.localOSC.push(OSCObj)
+  //   bus.emit('render')
+  // })
+
+  bus.on('ui:receivedOSC', function (OSCObj){
+    updateRemoteOSC(OSCObj)
+    bus.emit('render')
+  })
+
+  if (isElectron()) {
+    ipcRenderer.on('oscSend', (event, msg) => {
+      updateLocalOSC(msg)
+      bus.emit('render')
+    })
+  }
+
+  // bus.on('ui:localOSC', function (OSCObj){
+  //   updateLocalOSC(OSCObj)
+  //   bus.emit('render')
+  // })
+
   bus.on('ui:closeInspector', function () {
     state.ui.inspector.trackId = null
     state.ui.inspector.pc = null
@@ -57,13 +99,33 @@ function uiModel (state, bus) {
   })
 
   function appendNewChat(chatObj){
-    //  console.log(chatObj)
-      if(state.peers.byId[chatObj.peerId]){
-        chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
-        state.ui.chat.messages.push(chatObj)
-      } else {
-        console.log("USER NOT FOUND", chatObj)
-      }
-
+    if(state.peers.byId[chatObj.peerId]){
+      chatObj.nickname = state.peers.byId[chatObj.peerId].nickname
+      state.ui.chat.messages.push(chatObj)
+    } else {
+      console.log("USER NOT FOUND", chatObj)
     }
+
+  }
+
+  function updateRemoteOSC(oscObj){
+    state.ui.remoteOSC.peer = state.peers.byId[oscObj.peerId].nickname
+    state.ui.remoteOSC.osc = oscObj.osc
+    console.log('oscObj.osc', oscObj.osc)
+    // var newOSC = true
+    // state.ui.remoteOSC.forEach( function(obj) {
+    //   if (obj.peer == OSCObj.peer && obj.OSCaddress == OSCObj.OSCaddress) {
+    //     obj = OSCObj
+    //     newOSC = false
+    //   }
+    // })
+    // if (newOSC) {
+    //   state.ui.remoteOSC.push(OSCObj)
+    // }
+  }
+
+  function updateLocalOSC(msg) {
+    state.ui.localOSC = msg
+  }
+
 }
